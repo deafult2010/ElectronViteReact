@@ -1,11 +1,12 @@
 import React from 'react';
-import Clock from './Clock';
+import Clock from './components/Clock';
+import BasicEmbed from './components/BasicEmbed';
 
 const App = () => {
   return (
     <div className="app">
-      <h1>React Clock</h1>
-      <Clock />
+      <h1>Ember Tableau</h1>
+      <BasicEmbed />
     </div>
   );
 };
