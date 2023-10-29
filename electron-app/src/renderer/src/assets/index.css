@@ -6,3 +6,29 @@ body {
   color: #c5e6f3;
   background-color: #1e2757;
 }
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('./ICEMountain.png');
+  background-repeat: no-repeat;
+  background-size: 100%;
+  background-color: rgb(255, 255, 255, 1);
+  /* semi-transparent background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  width: 100%;
+  height: 100%;
+}
+
+iframe {
+  width: 100vw;
+  height: 100vh;
+}
