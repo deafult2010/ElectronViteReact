@@ -6,7 +6,11 @@ const EquationSolver = () => {
     const [solution, setSolution] = useState(null);
 
     const solveEquations = async () => {
-        let pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/' });
+        let pyodide = await loadPyodide({
+            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
+            stdout: (s) => { terminal.print(s) },
+            stderr: (s) => { terminal.print(s) }
+        });
         await pyodide.loadPackage(['sympy']);
 
         // Define the equations

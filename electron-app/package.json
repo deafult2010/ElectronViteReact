@@ -21,8 +21,11 @@
     "@electron-toolkit/utils": "^2.0.0",
     "electron-updater": "^6.1.1",
     "node-fetch": "^3.3.2",
+    "papaparse": "^5.4.1",
     "pyodide": "^0.24.1",
-    "tableau-api": "^2.2.3"
+    "tableau-api": "^2.2.3",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.1",
