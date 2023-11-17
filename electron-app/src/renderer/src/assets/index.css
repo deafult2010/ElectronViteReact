@@ -5,6 +5,78 @@ body {
     sans-serif;
   color: #c5e6f3;
   background-color: #1e2757;
+  margin: 0px;
+  height: 90vh;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  /* justify-content: center; */
+  /* text-align: center; */
+  width: 100%;
+  height: 80vh;
+  margin: 8px;
+  margin-top: 70px;
+}
+
+.navBar {
+  position: fixed;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.9);
+  padding-bottom: 20px;
+}
+
+.navBar ul {
+  display: flex;
+  list-style: none;
+  width: 100%;
+  justify-content: center;
+}
+
+.navBar li {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  margin: 0 1px;
+  /* background-color: #333; */
+}
+
+.navBar ul li a {
+  text-decoration: none;
+  padding-bottom: 20px;
+  text-transform: uppercase;
+  color: #f4f4f4;
+}
+
+.navBar ul li a:hover {
+  color: #e69500;
+  border-bottom: 3px solid orange;
+}
+
+.App {
+  /* text-align: center; */
+  display: flex;
+  flex-direction: column;
+  /* justify-content: center; */
+  /* align-items: center; */
+}
+
+@media only screen and (max-width: 915px) {
+  .navBar ul li a {
+    font-size: 12px;
+  }
+
+  .navBar ul li a:hover {
+    color: #e69500;
+    border-bottom: none;
+  }
 }
 
 .modal {
@@ -21,6 +93,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 2;
 }
 
 .modal-content {
