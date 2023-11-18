@@ -23,7 +23,7 @@ def constraint2(x):
     return sum_eq
 
 x0 = [1,5,5,1]
-print(objective(x0))
+# print(objective(x0))
 
 b = (1.0,5.0)
 bnds = (b,b,b,b)
@@ -32,4 +32,5 @@ con2 = {'type': 'eq', 'fun': constraint2}
 cons = [con1,con2]
 
 sol = minimize(objective,x0,method='SLSQP',bounds=bnds,constraints=cons)
-print(sol)
+# print(sol)
+print(sol.x[0])

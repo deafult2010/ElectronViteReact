@@ -13,7 +13,7 @@ function Header() {
                         <li>
                             <Link to="/" style={{ padding: '6px' }}>Home</Link>
                         </li>
-                        <li>
+                        {/* <li>
                             <Link
                                 to={{
                                     pathname: "/embed/",
@@ -24,15 +24,12 @@ function Header() {
                             >
                                 Basic Embed
                             </Link>
-                        </li>
-                        {/* <li>
-                            <Link to="/dynamic-load">Dynamic Load</Link>
                         </li> */}
                         <li>
                             <Link to="/xterm" style={{ padding: '6px' }}>XTerm</Link>
                         </li>
                         <li>
-                            <Link to="/message">Message</Link>
+                            <Link to="/data-upload">Data Upload</Link>
                         </li>
                         <li>
                             <Link to="/filter">Filter</Link>

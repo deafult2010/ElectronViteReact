@@ -14,8 +14,6 @@ const XTerm = () => {
     const { state, dispatch } = useContext(ReducerContext);
 
 
-
-
     useEffect(() => {
 
         state.text === `print('Terminal Cleared')` ? document.getElementById('textArea').value = state.text2 : document.getElementById('textArea').value = state.text

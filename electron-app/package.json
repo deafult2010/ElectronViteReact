@@ -20,6 +20,7 @@
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
     "electron-updater": "^6.1.1",
+    "jstat": "^1.9.6",
     "node-fetch": "^3.3.2",
     "papaparse": "^5.4.1",
     "pyodide": "^0.24.1",

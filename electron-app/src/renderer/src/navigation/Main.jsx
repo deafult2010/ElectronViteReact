@@ -5,7 +5,6 @@ import Clock from '../components/Clock';
 import Box from '../components/Box';
 import EquationSolver from '../components/EquationSolver';
 import XTerm from '../components/XTerm';
-import Message from '../components/Message';
 import CSVtoJSONConverter from '../components/CSVtoJSONConverter';
 import ICEAnim from '../components/ICEAnim';
 import SolverMLE from '../components/SolverMLE';
@@ -20,7 +19,7 @@ function Main() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/xterm" element={<XTerm />} />
-                <Route path="/message" element={<Message />} />
+                <Route path="/data-upload" element={<CSVtoJSONConverter />} />
                 {/* <Route path="/message" element={<Message runWorker={runWorker} />} /> */}
                 {/* <Route path="/embed/" component={BasicEmbed} />
             <Route path="/dynamic-load/" component={DynamicLoad} />
