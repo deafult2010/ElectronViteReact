@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import Papa from "papaparse";
 import jStat from "jstat";
+import { ReducerContext } from '../ReducerContext';
 
 const CSVtoJSONConverter = () => {
     const [csvFile, setCSVFile] = useState(null);
     const [jsonData, setJsonData] = useState(null);
+    const { state, dispatch } = useContext(ReducerContext);
+
+
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -17,14 +21,14 @@ const CSVtoJSONConverter = () => {
                 const { data } = results;
                 // Assuming the first row contains headers
                 const headers = data[0];
-                const jsonData = data.slice(1, data.length - 1).map((row) =>
+                const initialData = data.slice(1, data.length - 1).map((row) =>
                     headers.reduce(
                         (obj, header, index) => ({ ...obj, [header]: row[index] }),
                         {}
                     )
                 );
 
-                const orderedData = jsonData.sort((a, b) =>
+                const orderedData = initialData.sort((a, b) =>
                     new Date(a.Date) - new Date(b.Date)
                 );
 
@@ -33,7 +37,7 @@ const CSVtoJSONConverter = () => {
                         // First entry, no return calculation possible
                         return { ...data, "OneDayReturn": "N/A" };
                     } else {
-                        const previousPrice = parseFloat(jsonData[index - 1].Price);
+                        const previousPrice = parseFloat(initialData[index - 1].Price);
                         const currentPrice = parseFloat(data.Price);
                         const oneDayReturn = ((currentPrice - previousPrice) / previousPrice) * 100;
                         return { ...data, "OneDayReturn": `${oneDayReturn.toFixed(2)}%` };
@@ -75,10 +79,6 @@ const CSVtoJSONConverter = () => {
                 const mean = jStat.mean(returns) / 100;
                 const stdevS = jStat.stdev(returns, true) / 100;
 
-                console.log(returns)
-                console.log(mean)
-                console.log(stdevS)
-
                 const addNormalCDF = addEmpiricalCDF.map((item, index) => {
                     if (index === 0) {
                         // First entry, no return calculation possible
@@ -106,13 +106,19 @@ const CSVtoJSONConverter = () => {
                     }
                 });
 
-                const result = jStat.normal.cdf(-0.05, mean, stdevS, true)
-                console.log(result)
-
                 setJsonData(addJohnsonSUCDF);
+
+                dispatch({
+                    type: 'DATA',
+                    // payload: JSON.stringify(addJohnsonSUCDF)
+                    payload: addJohnsonSUCDF
+                });
+
+                console.log(state)
             },
         });
     };
+
 
     const altRowStyles = {
         background: 'white',
@@ -126,8 +132,7 @@ const CSVtoJSONConverter = () => {
         <div>
             <input type="file" onChange={handleFileChange} />
             <button onClick={convertCSVtoJSON}>Convert</button>
-            {jsonData && (
-                // <pre>{JSON.stringify(jsonData, null, 2)}</pre>
+            {state.data && (
                 <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: '300px' }}>
                     <thead>
                         <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
@@ -142,7 +147,7 @@ const CSVtoJSONConverter = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {jsonData.map((item, index) => (
+                        {state.data.map((item, index) => (
                             <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
                                 <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.Date}</td>
                                 <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.Price}</td>

@@ -11,40 +11,16 @@ function Header() {
                 <nav className="navBar">
                     <ul>
                         <li>
-                            <Link to="/" style={{ padding: '6px' }}>Home</Link>
+                            <Link to="/">Home</Link>
                         </li>
-                        {/* <li>
-                            <Link
-                                to={{
-                                    pathname: "/embed/",
-                                    state: {
-                                        title: "Basic Embed"
-                                    }
-                                }}
-                            >
-                                Basic Embed
-                            </Link>
-                        </li> */}
                         <li>
-                            <Link to="/xterm" style={{ padding: '6px' }}>XTerm</Link>
+                            <Link to="/xterm">XTerm</Link>
                         </li>
                         <li>
                             <Link to="/data-upload">Data Upload</Link>
                         </li>
                         <li>
-                            <Link to="/filter">Filter</Link>
-                        </li>
-                        <li>
-                            <Link to="/get-data">Get Data</Link>
-                        </li>
-                        <li>
-                            <Link to="/resize">Resize</Link>
-                        </li>
-                        <li>
-                            <Link to="/events">Events</Link>
-                        </li>
-                        <li>
-                            <Link to="/animation">Animation</Link>
+                            <Link to="/tableau">Tableau</Link>
                         </li>
                     </ul>
                 </nav>

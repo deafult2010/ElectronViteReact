@@ -6,7 +6,8 @@ import React, { createContext, useReducer } from 'react';
 const initialState = {
     text: ``,
     result: '',
-    text2: ``
+    text2: ``,
+    data: []
 };
 
 // Create the reducer function
@@ -26,6 +27,11 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 result: action.payload
+            };
+        case 'DATA':
+            return {
+                ...state,
+                data: action.payload
             };
         default:
             return state;
