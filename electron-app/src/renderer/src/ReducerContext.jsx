@@ -7,7 +7,8 @@ const initialState = {
     text: ``,
     result: '',
     text2: ``,
-    data: []
+    data: [],
+    stats: {}
 };
 
 // Create the reducer function
@@ -32,6 +33,11 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 data: action.payload
+            };
+        case 'STATS':
+            return {
+                ...state,
+                stats: action.payload
             };
         default:
             return state;
