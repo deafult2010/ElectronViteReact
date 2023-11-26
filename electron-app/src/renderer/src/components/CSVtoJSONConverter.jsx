@@ -6,12 +6,10 @@ import Chart from 'chart.js/auto'
 
 const CSVtoJSONConverter = () => {
     const [csvFile, setCSVFile] = useState(null);
-    const [numBins, setNumBins] = useState(4);
-    const [minX, setMinX] = useState(-9999);
-    const [maxX, setMaxX] = useState(-9999);
-    const [minXData, setMinXData] = useState(0);
-    const [maxXData, setMaxXData] = useState(0);
     const { state, dispatch } = useContext(ReducerContext);
+    const [numBins, setNumBins] = useState(state.numBins);
+    const [minX, setMinX] = useState(state.ranges.minX);
+    const [maxX, setMaxX] = useState(state.ranges.maxX);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
 
@@ -24,15 +22,15 @@ const CSVtoJSONConverter = () => {
         // Add bins
         const minReturn = Math.min(...returns.map(item => item * 1000));
         const maxReturn = Math.max(...returns.map(item => item * 1000));
-        const binWidth = Math.ceil((maxReturn - minReturn) / numBins);
+        const binWidth = Math.ceil((maxReturn - minReturn) / state.numBins);
 
         // Initialize bins
-        const bins = Array(numBins).fill(0);
+        const bins = Array(state.numBins).fill(0);
 
         // Distribute returns into bins
         returns.forEach(item => {
             const binIndex = Math.floor((item * 1000 * 0.9999999 - minReturn) / binWidth);
-            if (binIndex >= 0 && binIndex < numBins) {
+            if (binIndex >= 0 && binIndex < state.numBins) {
                 bins[binIndex]++;
             }
         });
@@ -126,10 +124,15 @@ const CSVtoJSONConverter = () => {
                     }
                 });
 
-                setMinX(Math.floor(minReturn * 0.5 / 1000))
-                setMaxX(Math.ceil(maxReturn * 0.5 / 1000))
-                setMinXData(Math.floor(minReturn / 1000))
-                setMaxXData(Math.ceil(maxReturn / 1000))
+                dispatch({
+                    type: 'RANGES',
+                    payload: {
+                        'minX': Math.floor(minReturn * 0.5 / 1000),
+                        'maxX': Math.ceil(maxReturn * 0.5 / 1000),
+                        'minXData': Math.floor(minReturn / 1000),
+                        'maxXData': Math.ceil(maxReturn / 1000),
+                    }
+                });
 
                 const addNormalCDF = addBins.map((item, index) => {
                     if (index === 0) {
@@ -276,8 +279,8 @@ const CSVtoJSONConverter = () => {
                                 value > 0 ? `+${value}%` : `${value}%`,
                         },
                         // clip off data
-                        min: minX,
-                        max: maxX
+                        min: state.ranges.minX,
+                        max: state.ranges.maxX
                     },
                     y: {
                         type: 'linear',
@@ -397,11 +400,16 @@ const CSVtoJSONConverter = () => {
                 options: chartOptions,
             });
 
-            if (minX === -9999) {
-                setMinX(Math.floor(minReturn * 0.5 / 1000))
-                setMaxX(Math.ceil(maxReturn * 0.5 / 1000))
-                setMinXData(Math.floor(minReturn / 1000))
-                setMaxXData(Math.ceil(maxReturn / 1000))
+            if (state.ranges.minX === -9999) {
+                dispatch({
+                    type: 'RANGES',
+                    payload: {
+                        'minX': Math.floor(minReturn * 0.5 / 1000),
+                        'maxX': Math.ceil(maxReturn * 0.5 / 1000),
+                        'minXData': Math.floor(minReturn / 1000),
+                        'maxXData': Math.ceil(maxReturn / 1000),
+                    }
+                });
             }
 
 
@@ -411,24 +419,68 @@ const CSVtoJSONConverter = () => {
             };
         }
 
-    }, [state.data, numBins, minX, maxX]);
+    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX]);
 
     const handleNumBinsChange = (e) => {
         setNumBins(Number(e.target.value));
     }
+    const handleNumBinsMouseUp = (e) => {
+        dispatch({
+            type: 'BINS',
+            payload: Number(e.target.value)
+        });
+    }
 
     const handleMinXChange = (e) => {
+        setMinX(e.target.value)
+    }
+    const handleMinXMouseUp = (e) => {
         const value = e.target.value;
-        setMinX(Number(e.target.value));
-        if (value >= maxX) {
-            setMinX(maxX);
+        dispatch({
+            type: 'RANGES',
+            payload: {
+                'minX': value,
+                'maxX': state.ranges.maxX,
+                'minXData': state.ranges.minXData,
+                'maxXData': state.ranges.maxXData
+            }
+        });
+        if (value >= state.ranges.maxX) {
+            dispatch({
+                type: 'RANGES',
+                payload: {
+                    'minX': state.ranges.maxX,
+                    'maxX': state.ranges.maxX,
+                    'minXData': state.ranges.minXData,
+                    'maxXData': state.ranges.maxXData
+                }
+            });
         }
     }
     const handleMaxXChange = (e) => {
+        setMaxX(e.target.value)
+    }
+    const handleMaxXMouseUp = (e) => {
         const value = e.target.value;
-        setMaxX(Number(e.target.value));
-        if (value <= minX) {
-            setMaxX(minX);
+        dispatch({
+            type: 'RANGES',
+            payload: {
+                'maxX': value,
+                'minX': state.ranges.minX,
+                'minXData': state.ranges.minXData,
+                'maxXData': state.ranges.maxXData
+            }
+        });
+        if (value <= state.ranges.minX) {
+            dispatch({
+                type: 'RANGES',
+                payload: {
+                    'maxX': state.ranges.minX,
+                    'minX': state.ranges.minX,
+                    'minXData': state.ranges.minXData,
+                    'maxXData': state.ranges.maxXData
+                }
+            });
         }
     }
 
@@ -464,13 +516,13 @@ const CSVtoJSONConverter = () => {
                 gridTemplateColumns: 'auto auto',
                 padding: '10px'
             }}>
-                <div><h1>PDFs</h1><label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>Number of bins: {numBins} <input type="range" min={3} max={500} value={numBins} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label></div>
+                <div><h1>PDFs</h1><label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>Number of bins: {numBins} <input type="range" min={3} max={500} value={numBins} onMouseUp={(value) => handleNumBinsMouseUp(value)} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label></div>
                 <div><h1>CDFs</h1></div>
                 <div style={{ width: '45vw', height: '50vh' }}><canvas ref={chartPDF}></canvas></div>
                 <div style={{ width: '45vw', height: '50vh' }}><canvas ref={chartCDF}></canvas></div>
                 <div>
-                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MinX: {minX}% <input type="range" min={minXData} max={maxXData} value={minX} step={0.2} onChange={(value) => handleMinXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
-                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MaxX: {maxX}% <input type="range" min={minXData} max={maxXData} value={maxX} step={0.2} onChange={(value) => handleMaxXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
+                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MinX: {minX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={minX} step={0.2} onMouseUp={(value) => handleMinXMouseUp(value)} onChange={(value) => handleMinXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
+                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MaxX: {maxX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={maxX} step={0.2} onMouseUp={(value) => handleMaxXMouseUp(value)} onChange={(value) => handleMaxXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
                 </div>
             </div>
             <h1>Data</h1>

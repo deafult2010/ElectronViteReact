@@ -8,7 +8,9 @@ const initialState = {
     result: '',
     text2: ``,
     data: [],
-    stats: {}
+    stats: {},
+    ranges: {},
+    numBins: 4
 };
 
 // Create the reducer function
@@ -38,6 +40,16 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 stats: action.payload
+            };
+        case 'RANGES':
+            return {
+                ...state,
+                ranges: action.payload
+            };
+        case 'BINS':
+            return {
+                ...state,
+                numBins: action.payload
             };
         default:
             return state;
