@@ -8,10 +8,16 @@ const CSVtoJSONConverter = () => {
     const [csvFile, setCSVFile] = useState(null);
     const { state, dispatch } = useContext(ReducerContext);
     const [numBins, setNumBins] = useState(state.numBins);
+    const [percentile, setPercentile] = useState(state.percentile);
     const [minX, setMinX] = useState(state.ranges.minX);
     const [maxX, setMaxX] = useState(state.ranges.maxX);
+    const [cMean, setCMean] = useState(state.cMean);
+    const [cStDev, setCStDev] = useState(state.cStDev);
+    const [cSkew, setCSkew] = useState(state.cSkew);
+    const [cKurt, setCKurt] = useState(state.cKurt);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
+
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -134,6 +140,9 @@ const CSVtoJSONConverter = () => {
                     }
                 });
 
+                setMaxX(Math.ceil(maxReturn * 0.5 / 1000))
+                setMinX(Math.floor(minReturn * 0.5 / 1000))
+
                 const addNormalCDF = addBins.map((item, index) => {
                     if (index === 0) {
                         // First entry, no return calculation possible
@@ -250,8 +259,27 @@ const CSVtoJSONConverter = () => {
         color: 'rgba(0, 0, 0, 1.0)',
         textAlign: 'center'
     }
+    const handleClick = (e, legendItem, legend) => {
+        const index = legendItem.datasetIndex;
+        const ci = legend.chart;
+        let array = [...state.isHidden]
+        array[index] = !array[index]
+        dispatch({
+            type: 'ISHIDDEN',
+            payload: array
+        });
+        if (ci.isDatasetVisible(index)) {
+            ci.hide(index);
+            legendItem.hidden = true;
+        } else {
+            ci.show(index);
+            legendItem.hidden = false;
+        }
+    }
 
     useEffect(() => {
+
+
 
         if (state.data) {
             const chartOptions = {
@@ -280,7 +308,9 @@ const CSVtoJSONConverter = () => {
                         },
                         // clip off data
                         min: state.ranges.minX,
-                        max: state.ranges.maxX
+                        max: state.ranges.maxX,
+                        //prevent offset between bar charts on x-axis
+                        stacked: true,
                     },
                     y: {
                         type: 'linear',
@@ -288,7 +318,28 @@ const CSVtoJSONConverter = () => {
                             beginAtZero: true,
                             callback: (value) => `${value}%`,
                         },
+                        stacked: false,
                     },
+                    //Add secondary axes for %iles
+                    yPct: {
+                        type: 'linear',
+                        display: false,
+                        ticks: {
+                            maxTicksLimit: 10,
+                            suggestedMax: 100,
+                            beginAtZero: true,
+                            callback: (value) => `${value}%`,
+                        },
+                    }
+                },
+                plugins: {
+                    legend: {
+                        onClick: handleClick,
+                        // Hide legends for %ile lines
+                        labels: {
+                            filter: item => item.text !== 'E %ile' && item.text !== 'N %ile' && item.text !== 'T %ile' && item.text !== 'J %ile'
+                        }
+                    }
                 },
             };
             const returns = state.data.slice(1).map((item) => item.RankedReturn.replace('%', ''));
@@ -322,28 +373,32 @@ const CSVtoJSONConverter = () => {
                         data: empiricalCDF,
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        borderWidth: 3,
+                        hidden: state.isHidden[0]
                     },
                     {
                         label: 'Normal CDF',
                         data: normalCDF,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(75, 83, 196, 0.2)',
+                        borderColor: 'rgba(75, 83, 196, 1)',
+                        borderWidth: 3,
+                        hidden: state.isHidden[1],
                     },
                     {
                         label: 'Student T CDF',
                         data: studentTCDF,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(144, 75, 196, 0.2)',
+                        borderColor: 'rgba(144, 75, 196, 1)',
+                        borderWidth: 3,
+                        hidden: state.isHidden[2],
                     },
                     {
                         label: 'Johnson SU CDF',
                         data: johnsonSUCDF,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(196, 75, 75, 0.2)',
+                        borderColor: 'rgba(196, 75, 75, 1)',
+                        borderWidth: 3,
+                        hidden: state.isHidden[3],
                     },
                 ],
             };
@@ -357,34 +412,86 @@ const CSVtoJSONConverter = () => {
                         data: empiricalPDF,
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        borderWidth: 3,
+                        hidden: state.isHidden[0],
                     },
                     {
 
                         type: 'line',
                         label: 'Normal PDF',
                         data: normalPDF,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(75, 83, 196, 0.2)',
+                        borderColor: 'rgba(75, 83, 196, 1)',
+                        borderWidth: 3,
+                        hidden: state.isHidden[1],
                     },
                     {
 
                         type: 'line',
                         label: 'Student T PDF',
                         data: studentTPDF,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        backgroundColor: 'rgba(144, 75, 196, 0.2)',
+                        borderColor: 'rgba(144, 75, 196, 1)',
+                        borderWidth: 3,
+                        hidden: state.isHidden[2],
                     },
                     {
 
                         type: 'line',
                         label: 'Johnson SU PDF',
                         data: johnsonSUPDF,
+                        backgroundColor: 'rgba(196, 75, 75, 0.2)',
+                        borderColor: 'rgba(196, 75, 75, 1)',
+                        borderWidth: 3,
+                        hidden: state.isHidden[3],
+                    },
+                    {
+                        type: 'line',
+                        label: `E %ile`,
+                        // data: ['N/A', '1', `${1}`, '1', '1'],
+                        data: johnsonSUPDF,
+                        yAxisID: 'yPct',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
+                        borderWidth: 2,
+                        maxBarThickness: 2,
+                        barThickness: 50
+                    },
+                    {
+                        type: 'line',
+                        label: `N %ile`,
+                        // data: ['N/A', '1', `${1}`, '1', '1'],
+                        data: normalPDF,
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        maxBarThickness: 2,
+                        barThickness: 50
+                    },
+                    {
+                        type: 'line',
+                        label: `T %ile`,
+                        // data: ['N/A', '1', `${1}`, '1', '1'],
+                        data: johnsonSUPDF,
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        maxBarThickness: 2,
+                        barThickness: 50
+                    },
+                    {
+                        type: 'bar',
+                        label: `J %ile`,
+                        // data: ['N/A', '1', `${1}`, '1', '1'],
+                        data: johnsonSUPDF,
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        maxBarThickness: 2,
+                        barThickness: 50,
                     },
                 ],
             };
@@ -410,6 +517,8 @@ const CSVtoJSONConverter = () => {
                         'maxXData': Math.ceil(maxReturn / 1000),
                     }
                 });
+                setMinX(Math.floor(minReturn * 0.5 / 1000))
+                setMaxX(Math.ceil(maxReturn * 0.5 / 1000))
             }
 
 
@@ -419,7 +528,7 @@ const CSVtoJSONConverter = () => {
             };
         }
 
-    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX]);
+    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX, state.isHidden]);
 
     const handleNumBinsChange = (e) => {
         setNumBins(Number(e.target.value));
@@ -431,25 +540,37 @@ const CSVtoJSONConverter = () => {
         });
     }
 
+    const handlePercentileChange = (e) => {
+        setPercentile(Number(e.target.value));
+    }
+    const handlePercentileMouseUp = (e) => {
+        dispatch({
+            type: 'PERCENTILE',
+            payload: Number(e.target.value)
+        });
+    }
+
     const handleMinXChange = (e) => {
         setMinX(e.target.value)
     }
     const handleMinXMouseUp = (e) => {
         const value = e.target.value;
-        dispatch({
-            type: 'RANGES',
-            payload: {
-                'minX': value,
-                'maxX': state.ranges.maxX,
-                'minXData': state.ranges.minXData,
-                'maxXData': state.ranges.maxXData
-            }
-        });
-        if (value >= state.ranges.maxX) {
+        if (Number(value) >= state.ranges.maxX) {
             dispatch({
                 type: 'RANGES',
                 payload: {
-                    'minX': state.ranges.maxX,
+                    'minX': ((Number(state.ranges.maxX).toFixed(2) * 100 - 0.2.toFixed(2) * 100) / 100).toFixed(1),
+                    'maxX': state.ranges.maxX,
+                    'minXData': state.ranges.minXData,
+                    'maxXData': state.ranges.maxXData
+                }
+            });
+            setMinX(((Number(state.ranges.maxX).toFixed(2) * 100 - 0.2.toFixed(2) * 100) / 100).toFixed(1))
+        } else {
+            dispatch({
+                type: 'RANGES',
+                payload: {
+                    'minX': value,
                     'maxX': state.ranges.maxX,
                     'minXData': state.ranges.minXData,
                     'maxXData': state.ranges.maxXData
@@ -462,20 +583,22 @@ const CSVtoJSONConverter = () => {
     }
     const handleMaxXMouseUp = (e) => {
         const value = e.target.value;
-        dispatch({
-            type: 'RANGES',
-            payload: {
-                'maxX': value,
-                'minX': state.ranges.minX,
-                'minXData': state.ranges.minXData,
-                'maxXData': state.ranges.maxXData
-            }
-        });
-        if (value <= state.ranges.minX) {
+        if (Number(value) <= state.ranges.minX) {
             dispatch({
                 type: 'RANGES',
                 payload: {
-                    'maxX': state.ranges.minX,
+                    'maxX': ((Number(state.ranges.minX).toFixed(2) * 100 + 0.2.toFixed(2) * 100) / 100).toFixed(1),
+                    'minX': state.ranges.minX,
+                    'minXData': state.ranges.minXData,
+                    'maxXData': state.ranges.maxXData
+                }
+            });
+            setMaxX(((Number(state.ranges.minX).toFixed(2) * 100 + 0.2.toFixed(2) * 100) / 100).toFixed(1))
+        } else {
+            dispatch({
+                type: 'RANGES',
+                payload: {
+                    'maxX': value,
                     'minX': state.ranges.minX,
                     'minXData': state.ranges.minXData,
                     'maxXData': state.ranges.maxXData
@@ -484,30 +607,126 @@ const CSVtoJSONConverter = () => {
         }
     }
 
+
+    const handleCMeanChange = (e) => {
+        setCMean(Number(e.target.value));
+    }
+    const handleCMeanMouseUp = (e) => {
+        dispatch({
+            type: 'CMEAN',
+            payload: Number(e.target.value)
+        });
+    }
+    const handleCStDevChange = (e) => {
+        setCStDev(Number(e.target.value));
+    }
+    const handleCStDevMouseUp = (e) => {
+        dispatch({
+            type: 'CSTDEV',
+            payload: Number(e.target.value)
+        });
+    }
+    const handleCSkewChange = (e) => {
+        setCSkew(Number(e.target.value));
+    }
+    const handleCSkewMouseUp = (e) => {
+        dispatch({
+            type: 'CSKEW',
+            payload: Number(e.target.value)
+        });
+    }
+    const handleCKurtChange = (e) => {
+        setCKurt(Number(e.target.value));
+    }
+    const handleCKurtMouseUp = (e) => {
+        dispatch({
+            type: 'CKURT',
+            payload: Number(e.target.value)
+        });
+    }
+
     return (
         <div>
             <input type="file" onChange={handleFileChange} />
             <button onClick={convertCSVtoJSON}>Convert</button>
             {state.stats.mean && (
                 <div>
-                    <h1>Sample Stats</h1>
                     <div style={{
-                        width: '180px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
                         display: 'grid',
-                        gridTemplateColumns: '100px 80px',
+                        gridTemplateColumns: '210px 210px 330px',
                         padding: '10px'
                     }}>
-                        <div style={gridItem}>Mean</div>
-                        <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
-                        <div style={gridItem}>StDev</div>
-                        <div style={gridItem}>{`${(state.stats.sStDev * 100).toFixed(2)}%`}</div>
-                        <div style={gridItem}>Skew</div>
-                        <div style={gridItem}>{(state.stats.sSkew).toFixed(2)}</div>
-                        <div style={gridItem}>ExKurt</div>
-                        <div style={gridItem}>{(state.stats.sKurt).toFixed(2)}</div>
-                        <div style={gridItem}>TDist DoF</div>
-                        <div style={gridItem}>{(state.stats.df).toFixed(2)}</div>
+                        <div>
+                            <h1>Sample Stats</h1>
+                            <div style={{
+                                width: '180px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                display: 'grid',
+                                gridTemplateColumns: '100px 80px',
+                                padding: '10px'
+                            }}>
+                                <div style={gridItem}>Mean</div>
+                                <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
+                                <div style={gridItem}>StDev</div>
+                                <div style={gridItem}>{`${(state.stats.sStDev * 100).toFixed(2)}%`}</div>
+                                <div style={gridItem}>Skew</div>
+                                <div style={gridItem}>{(state.stats.sSkew).toFixed(2)}</div>
+                                <div style={gridItem}>ExKurt</div>
+                                <div style={gridItem}>{(state.stats.sKurt).toFixed(2)}</div>
+                                <div style={gridItem}>TDist DoF</div>
+                                <div style={gridItem}>{(state.stats.df).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <h1>Johnson SU</h1>
+                            <div style={{
+                                width: '180px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                display: 'grid',
+                                gridTemplateColumns: '100px 80px',
+                                padding: '10px'
+                            }}>
+                                <div style={gridItem}>Gamma</div>
+                                <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
+                                <div style={gridItem}>Ksi</div>
+                                <div style={gridItem}>{`${(state.stats.sStDev * 100).toFixed(2)}%`}</div>
+                                <div style={gridItem}>Delta</div>
+                                <div style={gridItem}>{(state.stats.sSkew).toFixed(2)}</div>
+                                <div style={gridItem}>Lambda</div>
+                                <div style={gridItem}>{(state.stats.sKurt).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <h1>Custom Distribution</h1>
+                            <div style={{
+                                width: '330px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                display: 'grid',
+                                gridTemplateColumns: '100px 80px 150px',
+                                padding: '10px'
+                            }}>
+                                <div style={gridItem}>Mean</div>
+                                <div style={gridItem}>{`${(cMean).toFixed(2)}%`}</div>
+                                <div style={gridItem}>
+                                    <input type="range" min={state.stats.mean - state.stats.sStDev * 100} max={state.stats.mean + state.stats.sStDev * 100} value={cMean} step={0.1} onMouseUp={(value) => handleCMeanMouseUp(value)} onChange={(value) => handleCMeanChange(value)} />
+                                </div>
+                                <div style={gridItem}>StDev</div>
+                                <div style={gridItem}>{`${(cStDev).toFixed(2)}%`}</div>
+                                <div style={gridItem}>
+                                    <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 10} value={cStDev} step={0.1} onMouseUp={(value) => handleCStDevMouseUp(value)} onChange={(value) => handleCStDevChange(value)} />
+                                </div>
+                                <div style={gridItem}>Skew</div>
+                                <div style={gridItem}>{(cSkew).toFixed(2)}</div>
+                                <div style={gridItem}>
+                                    <input type="range" min={-10} max={10} value={cSkew} step={0.1} onMouseUp={(value) => handleCSkewMouseUp(value)} onChange={(value) => handleCSkewChange(value)} />
+                                </div>
+                                <div style={gridItem}>ExKurt</div>
+                                <div style={gridItem}>{(cKurt).toFixed(2)}</div>
+                                <div style={gridItem}>
+                                    <input type="range" min={-30} max={30} value={cKurt} step={0.1} onMouseUp={(value) => handleCKurtMouseUp(value)} onChange={(value) => handleCKurtChange(value)} />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -516,7 +735,15 @@ const CSVtoJSONConverter = () => {
                 gridTemplateColumns: 'auto auto',
                 padding: '10px'
             }}>
-                <div><h1>PDFs</h1><label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>Number of bins: {numBins} <input type="range" min={3} max={500} value={numBins} onMouseUp={(value) => handleNumBinsMouseUp(value)} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label></div>
+                <div>
+                    <h1>PDFs</h1>
+                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>
+                        Number of bins: {numBins} <input type="range" min={3} max={250} value={numBins} onMouseUp={(value) => handleNumBinsMouseUp(value)} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>
+                        Percentile: {percentile}% <input type="range" min={0.1} max={10} value={percentile} step={0.1} onMouseUp={(value) => handlePercentileMouseUp(value)} onChange={(value) => handlePercentileChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
+                    </label>
+                </div>
                 <div><h1>CDFs</h1></div>
                 <div style={{ width: '45vw', height: '50vh' }}><canvas ref={chartPDF}></canvas></div>
                 <div style={{ width: '45vw', height: '50vh' }}><canvas ref={chartCDF}></canvas></div>

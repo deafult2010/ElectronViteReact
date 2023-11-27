@@ -10,7 +10,13 @@ const initialState = {
     data: [],
     stats: {},
     ranges: {},
-    numBins: 4
+    numBins: 100,
+    percentile: 1,
+    isHidden: [false, true, true, true],
+    cMean: 0,
+    cStDev: 1,
+    cSkew: 0,
+    cKurt: 0
 };
 
 // Create the reducer function
@@ -50,6 +56,36 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 numBins: action.payload
+            };
+        case 'PERCENTILE':
+            return {
+                ...state,
+                percentile: action.payload
+            };
+        case 'ISHIDDEN':
+            return {
+                ...state,
+                isHidden: action.payload
+            };
+        case 'CMEAN':
+            return {
+                ...state,
+                cMean: action.payload
+            };
+        case 'CSTDEV':
+            return {
+                ...state,
+                cStDev: action.payload
+            };
+        case 'CSKEW':
+            return {
+                ...state,
+                cSkew: action.payload
+            };
+        case 'CKURT':
+            return {
+                ...state,
+                cKurt: action.payload
             };
         default:
             return state;
