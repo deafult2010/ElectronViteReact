@@ -10,3 +10,9 @@
   // solution_js = {'x': float(solution[x]), 'y': float(solution[y])}
   // solution_js = to_js(solution_js, dict_converter=Object.fromEntries)
   // print(solution_js.y)
+
+// Johnson SU Inv
+// import numpy as np
+// from scipy.stats import johnsonsu
+// r = johnsonsu.ppf(0.99, 1, 2, 1.1, 1.5)
+// print(r)

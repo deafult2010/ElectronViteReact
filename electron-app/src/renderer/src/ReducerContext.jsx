@@ -12,7 +12,7 @@ const initialState = {
     ranges: {},
     numBins: 100,
     percentile: 1,
-    isHidden: [false, true, true, true],
+    isHidden: [false, true, true, true, true],
     cMean: 0,
     cStDev: 1,
     cSkew: 0,
