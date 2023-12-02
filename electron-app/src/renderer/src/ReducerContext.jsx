@@ -11,12 +11,15 @@ const initialState = {
     stats: {},
     ranges: {},
     numBins: 100,
-    percentile: 1,
+    percentile: 99,
     isHidden: [false, true, true, true, true],
+    isHiddenP: false,
     cMean: 0,
     cStDev: 1,
     cSkew: 0,
-    cKurt: 0
+    cKurt: 0,
+    jsu: ``,
+    resultjsu: ``,
 };
 
 // Create the reducer function
@@ -43,10 +46,21 @@ const reducer = (state, action) => {
                 data: action.payload
             };
         case 'STATS':
-            return {
-                ...state,
-                stats: action.payload
-            };
+            if (Object.keys(action.payload).some(key => key === 'sSkew')) {
+                return {
+                    ...state,
+                    stats: action.payload
+                };
+            } else {
+                return {
+                    ...state,
+                    stats: {
+                        ...state.stats,
+                        JileL: action.payload.JileL,
+                        JileU: action.payload.JileU
+                    }
+                };
+            }
         case 'RANGES':
             return {
                 ...state,
@@ -67,6 +81,11 @@ const reducer = (state, action) => {
                 ...state,
                 isHidden: action.payload
             };
+        case 'ISHIDDENP':
+            return {
+                ...state,
+                isHiddenP: action.payload
+            };
         case 'CMEAN':
             return {
                 ...state,
@@ -86,6 +105,16 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 cKurt: action.payload
+            };
+        case 'JSU':
+            return {
+                ...state,
+                jsu: action.payload
+            };
+        case 'RESULTJSU':
+            return {
+                ...state,
+                resultjsu: action.payload
             };
         default:
             return state;

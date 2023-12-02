@@ -6,7 +6,7 @@ export default () => {
         self.pyodide = await loadPyodide({
             stdout: (s) => { postMessage(s) }
         });
-        await self.pyodide.loadPackage(["sympy", "scipy"]);
+        await self.pyodide.loadPackage(["numpy", "sympy", "scipy"]);
         // await self.pyodide.loadPackage(["numpy", "pytz"]);
     }
 

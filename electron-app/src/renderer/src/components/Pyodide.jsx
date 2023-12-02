@@ -13,7 +13,18 @@ const Pyodide = () => {
     const webWorker = useMemo(() => new WebWorker(worker), [])
 
     useEffect(() => {
-        // runWorker();
+        dispatch({
+            type: 'TEXT',
+            payload: `
+from scipy.stats import johnsonsu
+print('loaded johnsonsu')
+            `
+        });
+    }, [])
+
+
+    //XTerm Logic:
+    useEffect(() => {
         webWorker.postMessage(state.text)
         return () => {
         };

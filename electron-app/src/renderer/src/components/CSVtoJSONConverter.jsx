@@ -48,7 +48,7 @@ const CSVtoJSONConverter = () => {
         return [bins2, minReturn, maxReturn, binWidth]
     }
 
-    const computeStats = (initialData) => {
+    const computeStats = async (initialData) => {
 
         const orderedData = initialData.sort((a, b) =>
             new Date(a.Date) - new Date(b.Date)
@@ -103,11 +103,28 @@ const CSVtoJSONConverter = () => {
         const sSkew = jStat.skewness(returns);
         const sKurt = jStat.kurtosis(returns);
         const df = 6 / sKurt + 4
-        const Eile = `${(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Nile = `${(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Tile = `${(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Jile = `${(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Cile = `${(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
+
+        dispatch({
+            type: 'TEXT',
+            payload: `
+from scipy.stats import johnsonsu
+r1 = round(johnsonsu.ppf(${state.percentile / 100}, 1, 2, 1.1, 1.5), 2)
+r2 = round(johnsonsu.ppf(${1 - state.percentile / 100}, 1, 2, 1.1, 1.5), 2)
+print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
+            `
+        });
+
+        const NileL = `${Number(jStat.normal.inv(1 - percentile / 100, mean, sStDev * 100)).toFixed(2)}%`
+        const TileL = `${Number(jStat.studentt.inv(1 - percentile / 100, df)).toFixed(2)}%`
+        const EileL = `${Number(jStat.percentile(returns, 1 - percentile / 100)).toFixed(2)}%`
+        const JileL = state.stats.JileL ? state.stats.JileL : `Loading...`
+        const CileL = `Loading...`
+        const NileU = `${Number(jStat.normal.inv(percentile / 100, mean, sStDev * 100)).toFixed(2)}%`
+        const TileU = `${Number(jStat.studentt.inv(percentile / 100, df)).toFixed(2)}%`
+        const EileU = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
+        const JileU = state.stats.JileU ? state.stats.JileU : `Loading...`
+        const CileU = `Loading...`
+
 
         const [bins2, minReturn, maxReturn, binWidth] = ComputeBins(returns)
 
@@ -224,11 +241,16 @@ const CSVtoJSONConverter = () => {
                 'sSkew': sSkew,
                 'sKurt': sKurt,
                 'df': df,
-                'Nile': Nile,
-                'Eile': Eile,
-                'Tile': Tile,
-                'Jile': Jile,
-                'Cile': Cile,
+                'NileL': NileL,
+                'EileL': EileL,
+                'TileL': TileL,
+                'JileL': JileL,
+                'CileL': CileL,
+                'NileU': NileU,
+                'EileU': EileU,
+                'TileU': TileU,
+                'JileU': JileU,
+                'CileU': CileU,
             }
         });
     }
@@ -255,6 +277,23 @@ const CSVtoJSONConverter = () => {
     const loadJSON = () => {
         computeStats(SPData)
     }
+
+    useEffect(() => {
+        if (state.result.startsWith('{"JileL":')) {
+            const data = JSON.parse(state.result)
+            console.log(data)
+
+            dispatch({
+                type: 'STATS',
+                // payload: JSON.stringify(addJohnsonSUCDF)
+                payload: {
+                    'JileL': data.JileL,
+                    'JileU': data.JileU,
+                }
+            });
+        }
+    }, [state.result])
+
 
 
 
@@ -337,7 +376,7 @@ const CSVtoJSONConverter = () => {
                         onClick: handleClick,
                         // Hide legends for %ile lines
                         labels: {
-                            filter: item => item.text !== 'E %ile' && item.text !== 'N %ile' && item.text !== 'T %ile' && item.text !== 'J %ile' && item.text !== 'C %ile'
+                            filter: item => item.text !== 'E %ileL' && item.text !== 'N %ileL' && item.text !== 'T %ileL' && item.text !== 'J %ileL' && item.text !== 'C %ileL' && item.text !== 'E %ileU' && item.text !== 'N %ileU' && item.text !== 'T %ileU' && item.text !== 'J %ileU' && item.text !== 'C %ileU'
                         }
                     }
                 },
@@ -410,10 +449,9 @@ const CSVtoJSONConverter = () => {
                     },
                 ],
             };
-
             const chartPDFData = {
                 labels: rankedReturns,
-                datasets: [
+                datasets: state.stats.EileL ? [
                     {
                         type: 'bar',
                         label: 'Empirical',
@@ -421,7 +459,7 @@ const CSVtoJSONConverter = () => {
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 3,
-                        hidden: state.isHidden[0],
+                        hidden: state.isHidden[0]
                     },
                     {
                         type: 'line',
@@ -460,48 +498,68 @@ const CSVtoJSONConverter = () => {
                         hidden: state.isHidden[4],
                     },
                     {
-                        type: 'line',
-                        label: `E %ile`,
-                        // data: ['N/A', '1', `${1}`, '1', '1'],
-                        data: johnsonSUPDF,
+                        type: 'scatter',
+                        label: `E %ileL`,
+                        data: [{ x: Number(state.stats.EileL.replace('%', '')), y: 0 }, { x: Number(state.stats.EileL.replace('%', '')), y: 1 }],
                         yAxisID: 'yPct',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 2,
-                        maxBarThickness: 2,
-                        barThickness: 50,
-                        hidden: state.isHidden[0]
+                        showLine: true,
+                        hidden: state.isHidden[0] || state.isHiddenP
                     },
                     {
-                        type: 'line',
-                        label: `N %ile`,
-                        // data: ['N/A', '1', `${1}`, '1', '1'],
-                        data: normalPDF,
+                        type: 'scatter',
+                        label: `E %ileU`,
+                        data: [{ x: Number(state.stats.EileU.replace('%', '')), y: 0 }, { x: Number(state.stats.EileU.replace('%', '')), y: 1 }],
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        showLine: true,
+                        hidden: state.isHidden[0] || state.isHiddenP
+                    },
+                    {
+                        type: 'scatter',
+                        label: `N %ileL`,
+                        data: [{ x: Number(state.stats.NileL.replace('%', '')), y: 0 }, { x: Number(state.stats.NileL.replace('%', '')), y: 1 }],
                         yAxisID: 'yPct',
                         backgroundColor: 'rgba(75, 83, 196, 0.2)',
                         borderColor: 'rgba(75, 83, 196, 1)',
-                        borderWidth: 2,
-                        maxBarThickness: 2,
-                        barThickness: 50,
-                        hidden: state.isHidden[1]
+                        showLine: true,
+                        hidden: state.isHidden[1] || state.isHiddenP
                     },
                     {
-                        type: 'line',
-                        label: `T %ile`,
-                        // data: ['N/A', '1', `${1}`, '1', '1'],
-                        data: johnsonSUPDF,
+                        type: 'scatter',
+                        label: `N %ileU`,
+                        data: [{ x: Number(state.stats.NileU.replace('%', '')), y: 0 }, { x: Number(state.stats.NileU.replace('%', '')), y: 1 }],
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(75, 83, 196, 0.2)',
+                        borderColor: 'rgba(75, 83, 196, 1)',
+                        showLine: true,
+                        hidden: state.isHidden[1] || state.isHiddenP
+                    },
+                    {
+                        type: 'scatter',
+                        label: `T %ileL`,
+                        data: [{ x: Number(state.stats.TileL.replace('%', '')), y: 0 }, { x: Number(state.stats.TileL.replace('%', '')), y: 1 }],
                         yAxisID: 'yPct',
                         backgroundColor: 'rgba(144, 75, 196, 0.2)',
                         borderColor: 'rgba(144, 75, 196, 1)',
-                        borderWidth: 2,
-                        maxBarThickness: 2,
-                        barThickness: 50,
-                        hidden: state.isHidden[2]
+                        showLine: true,
+                        hidden: state.isHidden[2] || state.isHiddenP
+                    },
+                    {
+                        type: 'scatter',
+                        label: `T %ileU`,
+                        data: [{ x: Number(state.stats.TileU.replace('%', '')), y: 0 }, { x: Number(state.stats.TileU.replace('%', '')), y: 1 }],
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(144, 75, 196, 0.2)',
+                        borderColor: 'rgba(144, 75, 196, 1)',
+                        showLine: true,
+                        hidden: state.isHidden[2] || state.isHiddenP
                     },
                     {
                         type: 'bar',
-                        label: `J %ile`,
-                        // data: ['N/A', '1', `${1}`, '1', '1'],
+                        label: `J %ileL`,
                         data: johnsonSUPDF,
                         yAxisID: 'yPct',
                         backgroundColor: 'rgba(196, 75, 75, 0.2)',
@@ -509,12 +567,11 @@ const CSVtoJSONConverter = () => {
                         borderWidth: 2,
                         maxBarThickness: 2,
                         barThickness: 50,
-                        hidden: state.isHidden[3]
+                        hidden: state.isHidden[3] || state.isHiddenP
                     },
                     {
                         type: 'bar',
-                        label: `C %ile`,
-                        // data: ['N/A', '1', `${1}`, '1', '1'],
+                        label: `C %ileL`,
                         data: johnsonSUPDF,
                         yAxisID: 'yPct',
                         backgroundColor: 'rgba(75, 192, 77, 0.2)',
@@ -522,12 +579,13 @@ const CSVtoJSONConverter = () => {
                         borderWidth: 2,
                         maxBarThickness: 2,
                         barThickness: 50,
-                        hidden: state.isHidden[4]
+                        hidden: state.isHidden[4] || state.isHiddenP
                     },
-                ],
+                ] : [],
             };
 
             const myChart = new Chart(chartPDF.current, {
+                type: 'scatter',
                 data: chartPDFData,
                 options: chartOptions,
             });
@@ -559,7 +617,7 @@ const CSVtoJSONConverter = () => {
             };
         }
 
-    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX, state.isHidden]);
+    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX, state.isHidden, state.isHiddenP, state.stats]);
 
     const handleNumBinsChange = (e) => {
         setNumBins(Number(e.target.value));
@@ -576,15 +634,27 @@ const CSVtoJSONConverter = () => {
     }
     const handlePercentileMouseUp = (e) => {
         const returns = state.data.slice(1).map((item) => Number(item.RankedReturn.replace('%', '')));
-        console.log(returns)
-        const Nile = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Tile = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Eile = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Jile = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const Cile = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
+        const NileL = `${Number(jStat.normal.inv(1 - percentile / 100, state.stats.mean, state.stats.sStDev * 100)).toFixed(2)}%`
+        const TileL = `${Number(jStat.studentt.inv(1 - percentile / 100, state.stats.df)).toFixed(2)}%`
+        const EileL = `${Number(jStat.percentile(returns, 1 - percentile / 100)).toFixed(2)}%`
+        const JileL = state.stats.JileL ? state.stats.JileL : `Loading...`
+        const CileL = `Loading...`
+        const NileU = `${Number(jStat.normal.inv(percentile / 100, state.stats.mean, state.stats.sStDev * 100)).toFixed(2)}%`
+        const TileU = `${Number(jStat.studentt.inv(percentile / 100, state.stats.df)).toFixed(2)}%`
+        const EileU = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
+        const JileU = state.stats.JileU ? state.stats.JileU : `Loading...`
+        const CileU = `Loading...`
 
-        console.log(percentile / 100)
-        console.log(Eile)
+        dispatch({
+            type: 'TEXT',
+            payload: `
+from scipy.stats import johnsonsu
+r1 = round(johnsonsu.ppf(${e.target.value / 100}, 1, 2, 1.1, 1.5), 2)
+r2 = round(johnsonsu.ppf(${1 - e.target.value / 100}, 1, 2, 1.1, 1.5), 2)
+print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
+            `
+        });
+
         dispatch({
             type: 'PERCENTILE',
             payload: Number(e.target.value)
@@ -597,11 +667,16 @@ const CSVtoJSONConverter = () => {
                 'sSkew': state.stats.sSkew,
                 'sKurt': state.stats.sKurt,
                 'df': state.stats.df,
-                'Nile': Nile,
-                'Eile': Eile,
-                'Tile': Tile,
-                'Jile': Jile,
-                'Cile': Cile,
+                'NileL': NileL,
+                'EileL': EileL,
+                'TileL': TileL,
+                'JileL': JileL,
+                'CileL': CileL,
+                'NileU': NileU,
+                'EileU': EileU,
+                'TileU': TileU,
+                'JileU': JileU,
+                'CileU': CileU,
             }
         });
     }
@@ -701,6 +776,12 @@ const CSVtoJSONConverter = () => {
         });
     }
 
+    const hidePercentiles = () => {
+        dispatch({
+            type: 'ISHIDDENP',
+            payload: !state.isHiddenP
+        });
+    }
 
     const altRowStyles = {
         background: 'white',
@@ -732,17 +813,18 @@ const CSVtoJSONConverter = () => {
                 <div>
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '210px 210px 330px',
-                        padding: '10px'
+                        gridTemplateColumns: '250px 250px 330px',
+                        paddingLeft: '10px'
                     }}>
                         <div>
-                            <h1>Sample Stats</h1>
+                            <h1>Sample Estimators</h1>
                             <div style={{
                                 width: '180px',
                                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
                                 display: 'grid',
                                 gridTemplateColumns: '100px 80px',
-                                padding: '10px'
+                                padding: '10px',
+                                marginLeft: '10px'
                             }}>
                                 <div style={gridItem}>Mean</div>
                                 <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
@@ -757,13 +839,14 @@ const CSVtoJSONConverter = () => {
                             </div>
                         </div>
                         <div>
-                            <h1>Johnson SU</h1>
+                            <h1>Johnson SU MLE</h1>
                             <div style={{
                                 width: '180px',
                                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
                                 display: 'grid',
                                 gridTemplateColumns: '100px 80px',
-                                padding: '10px'
+                                padding: '10px',
+
                             }}>
                                 <div style={gridItem}>Gamma</div>
                                 <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
@@ -823,7 +906,7 @@ const CSVtoJSONConverter = () => {
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'auto auto',
-                padding: '10px',
+                paddingLeft: '10px',
                 visibility: visibility
             }}>
                 <div>
@@ -832,32 +915,41 @@ const CSVtoJSONConverter = () => {
                         Number of bins: {numBins} <input type="range" min={3} max={250} value={numBins} onMouseUp={(value) => handleNumBinsMouseUp(value)} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
                     </label>
                     <div style={{
-                        width: '420px',
+                        width: '500px',
                         backgroundColor: 'rgba(255, 255, 255, 0.8)',
                         color: 'rgba(0, 0, 0, 1.0)',
                         padding: '10px'
                     }}>
-                        <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>
-                            Percentiles: {percentile}% <input type="range" min={0.1} max={10} value={percentile} step={0.1} onMouseUp={(value) => handlePercentileMouseUp(value)} onChange={(value) => handlePercentileChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
+                        <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '388px', lineHeight: '26px', marginBottom: '10px' }}>
+                            Percentile: {percentile}% <input type="range" min={90} max={99.9} value={percentile} step={0.1} onMouseUp={(value) => handlePercentileMouseUp(value)} onChange={(value) => handlePercentileChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
+                            <button onClick={hidePercentiles}>{state.isHiddenP ? 'Show' : `'Hide'`}</button>
                         </label>
 
                         <div style={{
-                            width: '400px',
+                            width: '480px',
                             backgroundColor: 'rgba(255, 255, 255, 0.8)',
                             display: 'grid',
-                            gridTemplateColumns: '80px 80px 80px 80px 80px',
+                            gridTemplateColumns: '80px 80px 80px 80px 80px 80px',
                             padding: '10px'
                         }}>
+                            <div style={gridItem}>Dist.</div>
                             <div style={gridItem}>Empirical</div>
                             <div style={gridItem}>Normal</div>
                             <div style={gridItem}>Student T</div>
                             <div style={gridItem}>Johnson SU</div>
                             <div style={gridItem}>Custom</div>
-                            <div style={gridItem}>{state.stats.Eile}</div>
-                            <div style={gridItem}>{state.stats.Nile}</div>
-                            <div style={gridItem}>{state.stats.Tile}</div>
-                            <div style={gridItem}>{state.stats.Jile}</div>
-                            <div style={gridItem}>{state.stats.Cile}</div>
+                            <div style={gridItem}>Lower %ile</div>
+                            <div style={gridItem}>{state.stats.EileL}</div>
+                            <div style={gridItem}>{state.stats.NileL}</div>
+                            <div style={gridItem}>{state.stats.TileL}</div>
+                            <div style={gridItem}>{state.stats.JileL}</div>
+                            <div style={gridItem}>{state.stats.CileL}</div>
+                            <div style={gridItem}>Upper %ile</div>
+                            <div style={gridItem}>{state.stats.EileU}</div>
+                            <div style={gridItem}>{state.stats.NileU}</div>
+                            <div style={gridItem}>{state.stats.TileU}</div>
+                            <div style={gridItem}>{state.stats.JileU}</div>
+                            <div style={gridItem}>{state.stats.CileU}</div>
                         </div>
                     </div>
                 </div>
@@ -892,7 +984,7 @@ const CSVtoJSONConverter = () => {
             </div>
 
             {state.data.length != 0 && (
-                <div>
+                <div style={{ paddingLeft: '10px', }}>
                     <h1>Data</h1>
                     <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: '300px' }}>
                         <thead>
