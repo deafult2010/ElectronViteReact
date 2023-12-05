@@ -117,12 +117,12 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
         const NileL = `${Number(jStat.normal.inv(1 - percentile / 100, mean, sStDev * 100)).toFixed(2)}%`
         const TileL = `${Number(jStat.studentt.inv(1 - percentile / 100, df)).toFixed(2)}%`
         const EileL = `${Number(jStat.percentile(returns, 1 - percentile / 100)).toFixed(2)}%`
-        const JileL = state.stats.JileL ? state.stats.JileL : `Loading...`
+        const JileL = `Loading...`
         const CileL = `Loading...`
         const NileU = `${Number(jStat.normal.inv(percentile / 100, mean, sStDev * 100)).toFixed(2)}%`
         const TileU = `${Number(jStat.studentt.inv(percentile / 100, df)).toFixed(2)}%`
         const EileU = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const JileU = state.stats.JileU ? state.stats.JileU : `Loading...`
+        const JileU = `Loading...`
         const CileU = `Loading...`
 
 
@@ -171,10 +171,15 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
             }
         });
 
-        const gamma = 0.0407402307483621
-        const ksi = 0.000844392516855458
-        const delta = 1.04934098635626
-        const lambda = 0.00567675421526854
+        // const gamma = 0.0407402307483621
+        // const ksi = 0.000844392516855458
+        // const delta = 1.04934098635626
+        // const lambda = 0.00567675421526854
+        const gamma = 0.113241462
+        const ksi = 0.001887865
+        const delta = 1.131381728
+        const lambda = 0.009690778
+
 
         const addJohnsonSUCDF = addStudentTCDF.map((item, index) => {
             if (index === 0) {
@@ -221,15 +226,26 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
                 // First entry, no return calculation possible
                 return { ...item, "JohnsonSUPDF": "N/A" };
             } else {
-                const johnsonSUPDF = `${(delta / (lambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (gamma - delta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - ksi) / lambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - ksi) / lambda) ** 2)).toFixed(2)}`
+                const johnsonSUPDF = `${(delta / (lambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (gamma + delta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - ksi) / lambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - ksi) / lambda) ** 2)).toFixed(2)}`
                 return { ...item, "JohnsonSUPDF": johnsonSUPDF };
             }
         });
 
+        const addLogJohnsonSUPDF = addJohnsonSUPDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "LogJohnsonSUPDF": "N/A" };
+            } else {
+                const logJohnsonSUPDF = `${(Math.log(delta / (lambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (gamma + delta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - ksi) / lambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - ksi) / lambda) ** 2))).toFixed(2)}`
+                return { ...item, "LogJohnsonSUPDF": logJohnsonSUPDF };
+            }
+        });
+
+
         dispatch({
             type: 'DATA',
             // payload: JSON.stringify(addJohnsonSUCDF)
-            payload: addJohnsonSUPDF
+            payload: addLogJohnsonSUPDF
         });
 
         dispatch({
@@ -281,14 +297,25 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
     useEffect(() => {
         if (state.result.startsWith('{"JileL":')) {
             const data = JSON.parse(state.result)
-            console.log(data)
-
             dispatch({
                 type: 'STATS',
                 // payload: JSON.stringify(addJohnsonSUCDF)
                 payload: {
                     'JileL': data.JileL,
                     'JileU': data.JileU,
+                }
+            });
+        }
+        if (state.result.startsWith(`{"gamma":`)) {
+            const data = JSON.parse(state.result)
+            dispatch({
+                type: 'STATS',
+                // payload: JSON.stringify(addJohnsonSUCDF)
+                payload: {
+                    'gamma': data.gamma,
+                    'delta': data.delta,
+                    'ksi': data.ksi,
+                    'lambda': data.lambda,
                 }
             });
         }
@@ -313,6 +340,24 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
         } else {
             ci.show(index);
             legendItem.hidden = false;
+        }
+        if (index === 3) {
+            const returns = state.data.slice(1).map((item) => Number(item.RankedReturn.replace('%', '')) / 100);
+            dispatch({
+                type: 'TEXT',
+                payload: `
+import numpy as np
+from scipy.stats import johnsonsu
+import json
+
+json_data = "${JSON.stringify(returns)}"
+data = json.loads(json_data)
+r = johnsonsu.fit(data)
+r = {'gamma': r[0], 'delta': r[1], 'ksi': r[2], 'lambda': r[3]}
+r = json.dumps(r)
+print(r)
+            `
+            });
         }
     }
 
@@ -558,15 +603,23 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
                         hidden: state.isHidden[2] || state.isHiddenP
                     },
                     {
-                        type: 'bar',
+                        type: 'scatter',
                         label: `J %ileL`,
-                        data: johnsonSUPDF,
+                        data: [{ x: Number(state.stats.JileL.replace('%', '')), y: 0 }, { x: Number(state.stats.JileL.replace('%', '')), y: 1 }],
                         yAxisID: 'yPct',
                         backgroundColor: 'rgba(196, 75, 75, 0.2)',
                         borderColor: 'rgba(196, 75, 75, 1)',
-                        borderWidth: 2,
-                        maxBarThickness: 2,
-                        barThickness: 50,
+                        showLine: true,
+                        hidden: state.isHidden[3] || state.isHiddenP
+                    },
+                    {
+                        type: 'scatter',
+                        label: `J %ileU`,
+                        data: [{ x: Number(state.stats.JileU.replace('%', '')), y: 0 }, { x: Number(state.stats.JileU.replace('%', '')), y: 1 }],
+                        yAxisID: 'yPct',
+                        backgroundColor: 'rgba(196, 75, 75, 0.2)',
+                        borderColor: 'rgba(196, 75, 75, 1)',
+                        showLine: true,
                         hidden: state.isHidden[3] || state.isHiddenP
                     },
                     {
@@ -637,23 +690,21 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
         const NileL = `${Number(jStat.normal.inv(1 - percentile / 100, state.stats.mean, state.stats.sStDev * 100)).toFixed(2)}%`
         const TileL = `${Number(jStat.studentt.inv(1 - percentile / 100, state.stats.df)).toFixed(2)}%`
         const EileL = `${Number(jStat.percentile(returns, 1 - percentile / 100)).toFixed(2)}%`
-        const JileL = state.stats.JileL ? state.stats.JileL : `Loading...`
-        const CileL = `Loading...`
         const NileU = `${Number(jStat.normal.inv(percentile / 100, state.stats.mean, state.stats.sStDev * 100)).toFixed(2)}%`
         const TileU = `${Number(jStat.studentt.inv(percentile / 100, state.stats.df)).toFixed(2)}%`
         const EileU = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
-        const JileU = state.stats.JileU ? state.stats.JileU : `Loading...`
-        const CileU = `Loading...`
 
         dispatch({
             type: 'TEXT',
             payload: `
 from scipy.stats import johnsonsu
-r1 = round(johnsonsu.ppf(${e.target.value / 100}, 1, 2, 1.1, 1.5), 2)
-r2 = round(johnsonsu.ppf(${1 - e.target.value / 100}, 1, 2, 1.1, 1.5), 2)
-print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
+r1 = johnsonsu.ppf(${e.target.value / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
+r2 = johnsonsu.ppf(${1 - e.target.value / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
+print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%"}', sep='')
             `
         });
+
+        // NEED TO ADD CODE FOR DISPATCH CILE
 
         dispatch({
             type: 'PERCENTILE',
@@ -662,21 +713,12 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
         dispatch({
             type: 'STATS',
             payload: {
-                'mean': state.stats.mean,
-                'sStDev': state.stats.sStDev,
-                'sSkew': state.stats.sSkew,
-                'sKurt': state.stats.sKurt,
-                'df': state.stats.df,
                 'NileL': NileL,
                 'EileL': EileL,
                 'TileL': TileL,
-                'JileL': JileL,
-                'CileL': CileL,
                 'NileU': NileU,
                 'EileU': EileU,
                 'TileU': TileU,
-                'JileU': JileU,
-                'CileU': CileU,
             }
         });
     }
@@ -849,13 +891,13 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
 
                             }}>
                                 <div style={gridItem}>Gamma</div>
-                                <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
+                                <div style={gridItem}>{state.stats.gamma ? `${(state.stats.gamma).toFixed(4)}` : 'Loading...'}</div>
                                 <div style={gridItem}>Ksi</div>
-                                <div style={gridItem}>{`${(state.stats.sStDev * 100).toFixed(2)}%`}</div>
+                                <div style={gridItem}>{state.stats.ksi ? `${(state.stats.ksi).toFixed(4)}` : 'Loading...'}</div>
                                 <div style={gridItem}>Delta</div>
-                                <div style={gridItem}>{(state.stats.sSkew).toFixed(2)}</div>
+                                <div style={gridItem}>{state.stats.delta ? (state.stats.delta).toFixed(4) : 'Loading...'}</div>
                                 <div style={gridItem}>Lambda</div>
-                                <div style={gridItem}>{(state.stats.sKurt).toFixed(2)}</div>
+                                <div style={gridItem}>{state.stats.lambda ? (state.stats.lambda).toFixed(4) : 'Loading...'}</div>
                             </div>
                         </div>
                         <div>
@@ -1001,6 +1043,7 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
                                 <th style={{ border: '1px solid black', padding: '8px' }}>Normal PDF</th>
                                 <th style={{ border: '1px solid black', padding: '8px' }}>Student T PDF</th>
                                 <th style={{ border: '1px solid black', padding: '8px' }}>Johnson SU PDF</th>
+                                <th style={{ border: '1px solid black', padding: '8px' }}>Log Johnson SU PDF</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1018,6 +1061,7 @@ print('{"JileL":"', r2,'%","JileU":"',r1,'%"}', sep='')
                                     <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.NormalPDF}</td>
                                     <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.StudentTPDF}</td>
                                     <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.JohnsonSUPDF}</td>
+                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>
                                 </tr>
                             ))}
                         </tbody>

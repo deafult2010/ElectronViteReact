@@ -46,12 +46,22 @@ const reducer = (state, action) => {
                 data: action.payload
             };
         case 'STATS':
-            if (Object.keys(action.payload).some(key => key === 'sSkew')) {
+            if (Object.keys(action.payload)[0] === 'mean') {
                 return {
                     ...state,
                     stats: action.payload
                 };
-            } else {
+            } else if (Object.keys(action.payload)[0] === 'NileL') {
+                //destructing
+                const { NileL, EileL, TileL, NileU, EileU, TileU } = action.payload
+                return {
+                    ...state,
+                    stats: {
+                        ...state.stats,
+                        NileL, EileL, TileL, NileU, EileU, TileU
+                    }
+                };
+            } else if (Object.keys(action.payload)[0] === 'JileL') {
                 return {
                     ...state,
                     stats: {
@@ -60,7 +70,21 @@ const reducer = (state, action) => {
                         JileU: action.payload.JileU
                     }
                 };
-            }
+            } else if (Object.keys(action.payload)[0] === 'gamma') {
+                return {
+                    ...state,
+                    stats: {
+                        ...state.stats,
+                        gamma: action.payload.gamma,
+                        ksi: action.payload.ksi,
+                        delta: action.payload.delta,
+                        lambda: action.payload.lambda,
+                    }
+                };
+            } else
+                return {
+                    ...state,
+                };
         case 'RANGES':
             return {
                 ...state,

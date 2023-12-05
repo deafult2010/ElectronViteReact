@@ -33,4 +33,4 @@ cons = [con1,con2]
 
 sol = minimize(objective,x0,method='SLSQP',bounds=bnds,constraints=cons)
 # print(sol)
-print(sol.x[0])
+print(sol.x)
