@@ -14,12 +14,10 @@ const initialState = {
     percentile: 99,
     isHidden: [false, true, true, true, true],
     isHiddenP: false,
-    cMean: 0,
-    cStDev: 1,
-    cSkew: 0,
-    cKurt: 0,
+    custom: { cMean: 0, cStDev: 1, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318 },
     jsu: ``,
     resultjsu: ``,
+    fix: [false, false, false, false]
 };
 
 // Create the reducer function
@@ -58,16 +56,11 @@ const reducer = (state, action) => {
                     ...state,
                     stats: {
                         ...state.stats,
-                        NileL, EileL, TileL, NileU, EileU, TileU
-                    }
-                };
-            } else if (Object.keys(action.payload)[0] === 'JileL') {
-                return {
-                    ...state,
-                    stats: {
-                        ...state.stats,
-                        JileL: action.payload.JileL,
-                        JileU: action.payload.JileU
+                        NileL, EileL, TileL, NileU, EileU, TileU,
+                        JileL: `Loading...`,
+                        JileU: `Loading...`,
+                        CileL: `Loading...`,
+                        CileU: `Loading...`,
                     }
                 };
             } else if (Object.keys(action.payload)[0] === 'gamma') {
@@ -85,6 +78,17 @@ const reducer = (state, action) => {
                 return {
                     ...state,
                 };
+        case 'JILE':
+            return {
+                ...state,
+                stats: {
+                    ...state.stats,
+                    JileL: action.payload.JileL,
+                    JileU: action.payload.JileU,
+                    CileL: action.payload.CileL,
+                    CileU: action.payload.CileU
+                }
+            };
         case 'RANGES':
             return {
                 ...state,
@@ -110,25 +114,10 @@ const reducer = (state, action) => {
                 ...state,
                 isHiddenP: action.payload
             };
-        case 'CMEAN':
+        case 'CUSTOM':
             return {
                 ...state,
-                cMean: action.payload
-            };
-        case 'CSTDEV':
-            return {
-                ...state,
-                cStDev: action.payload
-            };
-        case 'CSKEW':
-            return {
-                ...state,
-                cSkew: action.payload
-            };
-        case 'CKURT':
-            return {
-                ...state,
-                cKurt: action.payload
+                custom: action.payload
             };
         case 'JSU':
             return {
@@ -139,6 +128,11 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 resultjsu: action.payload
+            };
+        case 'FIX':
+            return {
+                ...state,
+                fix: action.payload
             };
         default:
             return state;
