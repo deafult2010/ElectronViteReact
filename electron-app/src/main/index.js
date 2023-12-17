@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, webContents } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -18,6 +18,12 @@ function createWindow() {
       sandbox: false
     }
   })
+
+  // //If you need devtools in production uncomment the below four lines:
+  // const devtools = new BrowserWindow()
+  // mainWindow.loadURL('https://github.com')
+  // mainWindow.webContents.setDevToolsWebContents(devtools.webContents)
+  // mainWindow.webContents.openDevTools({ mode: 'detach' })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
