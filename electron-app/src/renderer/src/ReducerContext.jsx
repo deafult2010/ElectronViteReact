@@ -14,7 +14,7 @@ const initialState = {
     percentile: 99,
     isHidden: [false, true, true, true, true],
     isHiddenP: false,
-    custom: { cMean: 0, cStDev: 1, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318 },
+    custom: { cMean: 0, cStDev: 1, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318, cMLE: 0 },
     jsu: ``,
     resultjsu: ``,
     fix: [false, false, false, false]
@@ -72,6 +72,7 @@ const reducer = (state, action) => {
                         ksi: action.payload.ksi,
                         delta: action.payload.delta,
                         lambda: action.payload.lambda,
+                        mle: action.payload.mle,
                     }
                 };
             } else

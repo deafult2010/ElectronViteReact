@@ -1,20 +1,20 @@
 import React from 'react';
 
 const Excel = () => {
-    const runBatFile = async () => {
+    const runBrowser = async () => {
         window.api.openCoderJeet();
     };
-    const runBatFile2 = async () => {
+    const runExplorer = async () => {
         window.api.openExplorer();
     };
-    const runBatFile3 = async () => {
+    const runBatFile = async () => {
         window.api.runBat();
     };
 
     return <div>
-        <button onClick={runBatFile}>Open Browser</button>
-        <button onClick={runBatFile2}>Open Explorer</button>
-        <button onClick={runBatFile3}>Run Bat File</button>
+        <button onClick={runBrowser}>Open Browser</button>
+        <button onClick={runExplorer}>Open Explorer</button>
+        <button onClick={runBatFile}>Run Bat File</button>
     </div>
 };
 

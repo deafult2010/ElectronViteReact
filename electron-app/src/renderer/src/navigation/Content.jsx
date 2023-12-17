@@ -14,13 +14,13 @@ function Header() {
                             <Link to="/">Home</Link>
                         </li>
                         <li>
-                            <Link to="/excel">Excel</Link>
+                            <Link to="/upload">Upload</Link>
                         </li>
                         <li>
                             <Link to="/xterm">XTerm</Link>
                         </li>
                         <li>
-                            <Link to="/data-upload">Data Upload</Link>
+                            <Link to="/var">VaR</Link>
                         </li>
                         <li>
                             <Link to="/tableau">Tableau</Link>

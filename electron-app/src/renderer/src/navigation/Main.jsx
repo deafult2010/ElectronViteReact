@@ -1,25 +1,21 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
-import EquationSolver from '../components/EquationSolver';
 import XTerm from '../components/XTerm';
-import CSVtoJSONConverter from '../components/CSVtoJSONConverter';
-import ICEAnim from '../components/ICEAnim';
-import SolverMLE from '../components/SolverMLE';
+import VaR from '../components/VaR';
 import BasicEmbed from '../components/BasicEmbed';
 import Excel from '../components/Excel';
 import Home from "../components/Home";
 
-// function Main({ runWorker }) {
 function Main() {
     return (
         <section>
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/xterm" element={<XTerm />} />
-                <Route path="/data-upload" element={<CSVtoJSONConverter />} />
-                <Route path="/tableau/" element={<BasicEmbed />} />
-                <Route path="/excel/" element={<Excel />} />
+                <Route path="/var" element={<VaR />} />
+                <Route path="/tableau" element={<BasicEmbed />} />
+                <Route path="/upload" element={<Excel />} />
             </Routes>
         </section>
     );

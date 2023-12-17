@@ -5,7 +5,7 @@ import { ReducerContext } from '../ReducerContext';
 import Chart from 'chart.js/auto'
 import SPData from '../assets/SPData.json'
 
-const CSVtoJSONConverter = () => {
+const VaR = () => {
     const [csvFile, setCSVFile] = useState(null);
     const { state, dispatch } = useContext(ReducerContext);
     const [numBins, setNumBins] = useState(state.numBins);
@@ -16,12 +16,18 @@ const CSVtoJSONConverter = () => {
     const [cStDev, setCStDev] = useState(state.custom.cStDev);
     const [cSkew, setCSkew] = useState(state.custom.cSkew);
     const [cKurt, setCKurt] = useState(state.custom.cKurt);
+    const [cMLE, setCMLE] = useState(state.custom.cMLE);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
+    const [dataFile, setdataFile] = useState('Local');
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         setCSVFile(file);
+    };
+
+    const runBatFile = async () => {
+        window.api.runBat();
     };
 
     const ComputeBins = (returns) => {
@@ -228,6 +234,19 @@ print(r)
             }
         });
 
+        let sum = 0;
+        for (let i = 0; i < addLogCustomPDF.length; i++) {
+            if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
+                sum += Number(addLogCustomPDF[i].LogCustomPDF);
+            }
+        }
+        setCMLE(sum)
+
+        dispatch({
+            type: 'CUSTOM',
+            payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": sum }
+        });
+
         dispatch({
             type: 'DATA',
             // payload: JSON.stringify(addJohnsonSUCDF)
@@ -297,16 +316,6 @@ print(r)
         if (state.result.startsWith(`{"gamma":`)) {
             const data = JSON.parse(state.result)
             dispatch({
-                type: 'STATS',
-                // payload: JSON.stringify(addJohnsonSUCDF)
-                payload: {
-                    'gamma': data.gamma,
-                    'delta': data.delta,
-                    'ksi': data.ksi,
-                    'lambda': data.lambda,
-                }
-            });
-            dispatch({
                 type: 'TEXT',
                 payload: `
 from scipy.stats import johnsonsu
@@ -347,6 +356,23 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
                     return { ...item, "LogJohnsonSUPDF": logJohnsonSUPDF };
                 }
             });
+            let sum = 0;
+            for (let i = 0; i < addLogJohnsonSUPDF.length; i++) {
+                if (addLogJohnsonSUPDF[i].LogJohnsonSUPDF != "N/A") {
+                    sum += Number(addLogJohnsonSUPDF[i].LogJohnsonSUPDF);
+                }
+            }
+            dispatch({
+                type: 'STATS',
+                // payload: JSON.stringify(addJohnsonSUCDF)
+                payload: {
+                    'gamma': data.gamma,
+                    'delta': data.delta,
+                    'ksi': data.ksi,
+                    'lambda': data.lambda,
+                    'mle': sum
+                }
+            });
             dispatch({
                 type: 'DATA',
                 payload: addLogJohnsonSUPDF
@@ -360,14 +386,6 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
             setCStDev(cStDev * 100)
             setCSkew(cSkew)
             setCKurt(cKurt)
-            dispatch({
-                type: 'CUSTOM',
-                // payload: JSON.stringify(addJohnsonSUCDF)
-                payload: {
-                    // "cMean": state.result.cMean, "cStDev": state.result.cStDev, "cSkew": state.result.cSkew, "cKurt": state.result.cKurt, "cGamma": state.result.cGamma, "cDelta": state.result.cDelta, "cKsi": state.result.cKsi, "cLambda": state.result.cLambda
-                    cMean: cMean * 100, cStDev: cStDev * 100, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda
-                }
-            });
             dispatch({
                 type: 'TEXT',
                 payload: `
@@ -407,6 +425,21 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
                 } else {
                     const logCustomPDF = `${(Math.log(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2))).toFixed(2)}`
                     return { ...item, "LogCustomPDF": logCustomPDF };
+                }
+            });
+            let sum = 0;
+            for (let i = 0; i < addLogCustomPDF.length; i++) {
+                if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
+                    sum += Number(addLogCustomPDF[i].LogCustomPDF);
+                }
+            }
+            setCMLE(sum)
+            dispatch({
+                type: 'CUSTOM',
+                // payload: JSON.stringify(addJohnsonSUCDF)
+                payload: {
+                    // "cMean": state.result.cMean, "cStDev": state.result.cStDev, "cSkew": state.result.cSkew, "cKurt": state.result.cKurt, "cGamma": state.result.cGamma, "cDelta": state.result.cDelta, "cKsi": state.result.cKsi, "cLambda": state.result.cLambda
+                    cMean: cMean * 100, cStDev: cStDev * 100, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda, cMLE: sum
                 }
             });
             dispatch({
@@ -934,10 +967,6 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         const cKsi = 0
         const cDelta = 5.521765
         const cLambda = 0.054318
-        dispatch({
-            type: 'CUSTOM',
-            payload: { "cMean": 0, "cStDev": 1, "cSkew": 0, "cKurt": 3, "cGamma": cGamma, "cKsi": cKsi, "cDelta": cDelta, "cLambda": cLambda }
-        });
         setCMean(0)
         setCStDev(1)
         setCSkew(0)
@@ -983,6 +1012,20 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
                 return { ...item, "LogCustomPDF": logCustomPDF };
             }
         });
+
+        let sum = 0;
+        for (let i = 0; i < addLogCustomPDF.length; i++) {
+            if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
+                sum += Number(addLogCustomPDF[i].LogCustomPDF);
+            }
+        }
+        setCMLE(sum)
+
+        dispatch({
+            type: 'CUSTOM',
+            payload: { "cMean": 0, "cStDev": 1, "cSkew": 0, "cKurt": 3, "cGamma": cGamma, "cKsi": cKsi, "cDelta": cDelta, "cLambda": cLambda, "cMLE": sum }
+        });
+
         dispatch({
             type: 'DATA',
             payload: addLogCustomPDF
@@ -996,7 +1039,7 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
     const customSolve = () => {
         dispatch({
             type: 'CUSTOM',
-            payload: { "cMean": cMean, "cStDev": cStDev, "cSkew": cSkew, "cKurt": cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda }
+            payload: { "cMean": cMean, "cStDev": cStDev, "cSkew": cSkew, "cKurt": cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE }
         });
         dispatch({
             type: 'TEXT',
@@ -1088,11 +1131,27 @@ print(sol)
 
     const visibility = state.data.length != 0 ? 'visible' : 'hidden'
 
+    console.log(state.isHidden[1])
+
     return (
         <div>
-            <input type="file" onChange={handleFileChange} />
-            <button onClick={convertCSVtoJSON}>Convert</button>
-            <button onClick={loadJSON}>Local Data</button>
+            <div style={{ paddingLeft: '10px', }}>
+                <h1>Data</h1>
+                <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    display: 'grid',
+                    gridTemplateColumns: 'auto auto',
+                    paddingLeft: '10px'
+                }}>
+                    <div>
+                        <input type="file" onChange={handleFileChange} />
+                        <button onClick={convertCSVtoJSON}>Convert</button>
+                    </div>
+                    <div>
+                        <button onClick={loadJSON}>Local Data</button>
+                    </div>
+                </div>
+            </div>
             {state.stats.mean && (
                 <div>
                     <div style={{
@@ -1140,6 +1199,8 @@ print(sol)
                                 <div style={gridItem}>{state.stats.delta ? (state.stats.delta).toFixed(4) : 'Loading...'}</div>
                                 <div style={gridItem}>Lambda</div>
                                 <div style={gridItem}>{state.stats.lambda ? (state.stats.lambda).toFixed(4) : 'Loading...'}</div>
+                                <div style={gridItem}>MLE</div>
+                                <div style={gridItem}>{state.stats.mle ? (state.stats.mle).toFixed(2) : 'Loading...'}</div>
                             </div>
                         </div>
                         <div>
@@ -1183,11 +1244,11 @@ print(sol)
                                     <input type="range" min={3} max={30} value={cKurt} step={0.5} onChange={(value) => handleCKurtChange(value)} disabled={state.fix[3]} />
                                 </div>
                                 <div style={state.fix[3] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[3]} onChange={() => handleCheckbox(3)} /></div>
-                                <div />
-                                <div />
+                                <div style={gridItem}>MLE</div>
+                                {/* <div style={gridItem}>3000</div> */}
+                                <div style={gridItem}>{(cMLE).toFixed(2)}</div>
                                 <button onClick={customSolve}>Optimise/Solve</button>
                                 <button onClick={undo}>Undo</button>
-
                             </div>
                         </div>
                     </div>
@@ -1274,56 +1335,80 @@ print(sol)
             </div>
 
             {state.data.length != 0 && (
-                <div style={{ paddingLeft: '10px', }}>
-                    <h1>Data</h1>
-                    <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: '300px' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Date</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Price</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>One Day Return</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Rank</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Returns Ranked</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Empirical CDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Normal CDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Student T CDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Johnson SU CDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Custom CDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Normal PDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Student T PDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Johnson SU PDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Log Johnson SU PDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Custom PDF</th>
-                                <th style={{ border: '1px solid black', padding: '8px' }}>Log Custom PDF</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {state.data.map((item, index) => (
-                                <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.Date}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.Price}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.OneDayReturn}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.Rank}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.RankedReturn}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.EmpiricalCDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.NormalCDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.StudentTCDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.JohnsonSUCDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.CustomCDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.NormalPDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.StudentTPDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.JohnsonSUPDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.CustomPDF}</td>
-                                    <td style={{ border: '1px solid black', padding: '8px', color: 'black' }}>{item.LogCustomPDF}</td>
+                <div style={{
+                    padding: '10px'
+                }}>
+                    <div style={{ width: '300px' }}>
+                        <h1>View Output Data</h1>
+                        <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: 'auto' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                                    <th style={{ border: '1px solid black', paddingLeft: '29px', paddingRight: '29px' }}>Date</th>
+                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Price</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <tr style={rowStyles}>
+                                    <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>05-Nov-18</td>
+                                    <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>2738.31</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }}><button onClick={runBatFile}>Upload Data</button></div>
+                    </div>
+                    <div>
+                        <h1>View Input Data</h1>
+                        <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                                    <th style={{ border: '1px solid black', paddingLeft: '29px', paddingRight: '29px' }}>Date</th>
+                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Price</th>
+                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>OneDay Return</th>
+                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Rank</th>
+                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Returns Ranked</th>
+                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Empirical CDF</th>
+                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Normal CDF</th>}
+                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Student T CDF</th>}
+                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Johnson SU CDF</th>}
+                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Custom CDF</th>}
+                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Normal PDF</th>}
+                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Student T PDF</th>}
+                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Johnson SU PDF</th>}
+                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>LogJohnson SU PDF</th>}
+                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Custom PDF</th>}
+                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>LogCustom PDF</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {state.data.map((item, index) => (
+                                    <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
+                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.Date}</td>
+                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.Price}</td>
+                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.OneDayReturn}</td>
+                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.Rank}</td>
+                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.RankedReturn}</td>
+                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.EmpiricalCDF}</td>
+                                        {console.log(state.isHidden[1])}
+                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.NormalCDF}</td>}
+                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.StudentTCDF}</td>}
+                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.JohnsonSUCDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.CustomCDF}</td>}
+                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.NormalPDF}</td>}
+                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.StudentTPDF}</td>}
+                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.JohnsonSUPDF}</td>}
+                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.CustomPDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.LogCustomPDF}</td>}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 
-export default CSVtoJSONConverter;
+export default VaR;
