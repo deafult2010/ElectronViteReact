@@ -14,6 +14,9 @@ function Header() {
                             <Link to="/">Home</Link>
                         </li>
                         <li>
+                            <Link to="/excel">Excel</Link>
+                        </li>
+                        <li>
                             <Link to="/xterm">XTerm</Link>
                         </li>
                         <li>

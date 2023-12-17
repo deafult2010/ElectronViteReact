@@ -989,6 +989,10 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         });
     }
 
+    const undo = () => {
+        console.log('undo')
+    }
+
     const customSolve = () => {
         dispatch({
             type: 'CUSTOM',
@@ -1015,9 +1019,11 @@ def objective(x):
     return ${state.fix[0] ? `0` : `abs(cMean - ${cMean / 100})*100`}  ${state.fix[1] ? ` ` : ` + abs(cStDev - ${cStDev / 100})*1000`} ${state.fix[2] ? ` ` : ` + abs(cSkew - ${cSkew}) `} ${state.fix[3] ? ` ` : ` + abs(cKurt - ${cKurt})*1000`}
 x0 = [${state.custom.cGamma},${state.custom.cKsi},${state.custom.cDelta},${state.custom.cLambda}]
 a = (0, 1)
-${Math.abs(cSkew) < 1 ? `bnds = ((-0.01,0.01),(-0.1,0.1),(0, 4),a)` : `bnds = ((-1,1),(-0.1,0.1),(0, 4),a)`}
-# sol = minimize(objective,x0,method='Nelder-Mead',bounds=bnds)
+# below logic helps to optimise the computation for when skew is left unchanged
+${Math.abs(cSkew) <= 0.3 ? `bnds = ((-0.04,0.04),(-0.1,0.1),(0, 4),a)` : `bnds = ((-0.7,0.7),(-0.1,0.1),(0, 4),a)`}
+# SLSQP appears to be the best method
 sol = minimize(objective,x0,method='SLSQP',bounds=bnds)
+# sol = minimize(objective,x0,method='Nelder-Mead',bounds=bnds)
 # sol = minimize(objective,x0,method='Powell',bounds=bnds)
 cMean = sol.x[1]-sol.x[3]*np.exp((sol.x[2]**-2)/2)*np.sinh(sol.x[0]/sol.x[2])
 cStDev = np.sqrt(sol.x[3]**2/2*(np.exp(sol.x[2]**-2)-1)*(np.exp(sol.x[2]**-2)*np.cosh(2*sol.x[0]/sol.x[2])+1))
@@ -1180,7 +1186,7 @@ print(sol)
                                 <div />
                                 <div />
                                 <button onClick={customSolve}>Optimise/Solve</button>
-                                <div />
+                                <button onClick={undo}>Undo</button>
 
                             </div>
                         </div>

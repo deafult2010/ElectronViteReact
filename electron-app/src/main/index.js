@@ -1,7 +1,8 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import child from 'child_process'
 
 function createWindow() {
   // Create the browser window.
@@ -70,3 +71,29 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
+
+ipcMain.handle("openCoderJeet", () => {
+  shell.openExternal("https://youtube.com")
+});
+ipcMain.handle("openExplorer", () => {
+  // shell.openExternal("file://c:/windows/explorer.exe")
+  child.execFile("c:\\windows\\explorer.exe", ["c:\\"], (err, data) => {
+    if (err) {
+      console.log(err)
+      return
+    }
+    console.log(data.toString())
+  })
+});
+ipcMain.handle("runBat", () => {
+  const sourcePath = 'C:\\Users\\thoma\\OneDrive\\Desktop\\Projects\\BatTest\\test.xlsx';
+  const destinationPath = 'C:\\Users\\thoma\\OneDrive\\Desktop\\Projects';
+  child.execFile('cmd', ['/c', 'copy', sourcePath, destinationPath], (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error: ${error.message}`);
+      return;
+    }
+
+    console.log('File copied successfully!');
+  })
+});

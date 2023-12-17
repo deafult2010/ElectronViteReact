@@ -1,8 +1,18 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  openCoderJeet: async () => {
+    await ipcRenderer.invoke("openCoderJeet");
+  },
+  openExplorer: async () => {
+    await ipcRenderer.invoke("openExplorer");
+  },
+  runBat: async () => {
+    await ipcRenderer.invoke("runBat");
+  },
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
