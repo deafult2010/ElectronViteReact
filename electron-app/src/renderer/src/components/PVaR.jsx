@@ -5,7 +5,7 @@ import { ReducerContext } from '../ReducerContext';
 import Chart from 'chart.js/auto'
 import SPData from '../assets/SPData.json'
 
-const VaR = () => {
+const PVaR = () => {
     const [csvFile, setCSVFile] = useState(null);
     const { state, dispatch } = useContext(ReducerContext);
     const [numBins, setNumBins] = useState(state.numBins);
@@ -19,7 +19,21 @@ const VaR = () => {
     const [cMLE, setCMLE] = useState(state.custom.cMLE);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
-    const [dataFile, setdataFile] = useState('Local');
+    // save to csv
+    const [dataFile, setdataFile] = useState('local');
+    const [distOption, setDistOption] = useState('custom');
+    const [uploadOption, setUploadOption] = useState('csv');
+    const [inputOption, setInputOption] = useState('local');
+
+    const handleDistChange = (e) => {
+        setDistOption(e.target.value);
+    };
+    const handleUploadChange = (e) => {
+        setUploadOption(e.target.value);
+    };
+    const handleInputChange = (e) => {
+        setInputOption(e.target.value);
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -1136,7 +1150,28 @@ print(sol)
     return (
         <div>
             <div style={{ paddingLeft: '10px', }}>
-                <h1>Data</h1>
+                <div style={{
+                    width: '390px',
+                    display: 'grid',
+                    gridTemplateColumns: '60px 150px',
+                }}>
+                    <h1 style={{ margin: '5px', }}>Data</h1>
+                    <div style={{
+                        margin: 'auto auto 12px 0px',
+                        padding: '0 20px',
+                    }}>
+                        <select value={inputOption} onChange={handleInputChange} style={{
+                            backgroundColor: 'rgba(192, 227, 227, 1)',
+                            width: '130px',
+                        }}>
+                            <option value="local">Local</option>
+                            <option value="csv">CSV</option>
+                            <option value="tableau">Tableau</option>
+                            <option value="sql">SQL</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.8)',
                     display: 'grid',
@@ -1182,7 +1217,7 @@ print(sol)
                             </div>
                         </div>
                         <div>
-                            <h1>Johnson SU MLE</h1>
+                            <h1 style={{ color: 'rgba(227, 192, 192, 1)' }}>Johnson SU MLE</h1>
                             <div style={{
                                 width: '180px',
                                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -1204,7 +1239,27 @@ print(sol)
                             </div>
                         </div>
                         <div>
-                            <h1 style={{ marginBottom: '0px' }}>Custom Distribution</h1>
+                            <div style={{
+                                width: '390px',
+                                display: 'grid',
+                                gridTemplateColumns: '240px 150px',
+                            }}>
+                                <h1 style={{ marginBottom: '0px', color: 'rgba(192, 227, 192, 1)', }}>Custom Distribution</h1>
+                                <div style={{
+                                    margin: 'auto auto 7px 0px',
+                                    padding: '0 20px',
+                                }}>
+                                    <select value={distOption} onChange={handleDistChange} style={{
+                                        backgroundColor: 'rgba(192, 227, 192, 1)',
+                                        width: '130px',
+                                    }}>
+                                        <option value="custom">Custom</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="studentt">StudentT</option>
+                                        <option value="johnsonsu">JohnsonSU</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div style={{
                                 width: '370px',
                                 backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -1332,25 +1387,55 @@ print(sol)
                     <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MinX: {minX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={minX} step={0.2} onMouseUp={(value) => handleMinXMouseUp(value)} onChange={(value) => handleMinXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
                     <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MaxX: {maxX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={maxX} step={0.2} onMouseUp={(value) => handleMaxXMouseUp(value)} onChange={(value) => handleMaxXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
                 </div>
+                <div></div>
+                <div>
+                    <h1 style={{ margin: '5px 0px', }}>ACF Residuals</h1>
+                    <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
+                </div>
+                <div>
+                    <h1 style={{ margin: '5px 0px', }}>ACF Residuals^2</h1>
+                    <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
+                </div>
+                <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>
+                <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartCDF}></canvas> : `Loading...`}</div>
             </div>
 
             {state.data.length != 0 && (
                 <div style={{
                     padding: '10px'
                 }}>
-                    <div style={{ width: '300px' }}>
-                        <h1>View Output Data</h1>
+                    <div style={{ width: '430px' }}>
+                        <div style={{
+                            width: '390px',
+                            display: 'grid',
+                            gridTemplateColumns: '250px 150px',
+                        }}>
+                            <h1 style={{ margin: '5px', }}>View Custom Output</h1>
+                            <div style={{
+                                margin: 'auto auto 12px 0px',
+                                padding: '0 20px',
+                            }}>
+                                <select value={uploadOption} onChange={handleUploadChange} style={{
+                                    backgroundColor: 'rgba(192, 227, 227, 1)',
+                                    width: '130px',
+                                }}>
+                                    <option value="CSV">CSV</option>
+                                    <option value="Tableau Server">Tableau Server</option>
+                                    <option value="sql">SQL</option>
+                                </select>
+                            </div>
+                        </div>
                         <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: 'auto' }}>
                             <thead>
                                 <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
-                                    <th style={{ border: '1px solid black', paddingLeft: '29px', paddingRight: '29px' }}>Date</th>
-                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Price</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 29px' }}>Date</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Price</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr style={rowStyles}>
-                                    <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>05-Nov-18</td>
-                                    <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>2738.31</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>05-Nov-18</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>2738.31</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1361,44 +1446,44 @@ print(sol)
                         <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
-                                    <th style={{ border: '1px solid black', paddingLeft: '29px', paddingRight: '29px' }}>Date</th>
-                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Price</th>
-                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>OneDay Return</th>
-                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Rank</th>
-                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Returns Ranked</th>
-                                    <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Empirical CDF</th>
-                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Normal CDF</th>}
-                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Student T CDF</th>}
-                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Johnson SU CDF</th>}
-                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Custom CDF</th>}
-                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Normal PDF</th>}
-                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Student T PDF</th>}
-                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Johnson SU PDF</th>}
-                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>LogJohnson SU PDF</th>}
-                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>Custom PDF</th>}
-                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px' }}>LogCustom PDF</th>}
+                                    <th style={{ border: '1px solid black', padding: '0px 29px' }}>Date</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Price</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>OneDay Return</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Rank</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Returns Ranked</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Empirical CDF</th>
+                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Normal CDF</th>}
+                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Student T CDF</th>}
+                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Johnson SU CDF</th>}
+                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Custom CDF</th>}
+                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Normal PDF</th>}
+                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Student T PDF</th>}
+                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Johnson SU PDF</th>}
+                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>LogJohnson SU PDF</th>}
+                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Custom PDF</th>}
+                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>LogCustom PDF</th>}
                                 </tr>
                             </thead>
                             <tbody>
                                 {state.data.map((item, index) => (
                                     <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
-                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.Date}</td>
-                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.Price}</td>
-                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.OneDayReturn}</td>
-                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.Rank}</td>
-                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.RankedReturn}</td>
-                                        <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.EmpiricalCDF}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Date}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Price}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.OneDayReturn}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.RankedReturn}</td>
+                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.EmpiricalCDF}</td>
                                         {console.log(state.isHidden[1])}
-                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.NormalCDF}</td>}
-                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.StudentTCDF}</td>}
-                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.JohnsonSUCDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.CustomCDF}</td>}
-                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.NormalPDF}</td>}
-                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.StudentTPDF}</td>}
-                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.JohnsonSUPDF}</td>}
-                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.CustomPDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', paddingLeft: '8px', paddingRight: '8px', color: 'black' }}>{item.LogCustomPDF}</td>}
+                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalCDF}</td>}
+                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTCDF}</td>}
+                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUCDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomCDF}</td>}
+                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalPDF}</td>}
+                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTPDF}</td>}
+                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUPDF}</td>}
+                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomPDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.LogCustomPDF}</td>}
                                     </tr>
                                 ))}
                             </tbody>
@@ -1411,4 +1496,4 @@ print(sol)
     );
 };
 
-export default VaR;
+export default PVaR;

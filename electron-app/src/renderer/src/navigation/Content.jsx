@@ -14,16 +14,31 @@ function Header() {
                             <Link to="/">Home</Link>
                         </li>
                         <li>
-                            <Link to="/upload">Upload</Link>
-                        </li>
-                        <li>
                             <Link to="/xterm">XTerm</Link>
                         </li>
                         <li>
-                            <Link to="/var">VaR</Link>
+                            <Link to="/pric">PRIC</Link>
                         </li>
                         <li>
-                            <Link to="/tableau">Tableau</Link>
+                            <Link to="/pvar">PVaR</Link>
+                        </li>
+                        <li>
+                            <Link to="/fhvar">FHS</Link>
+                        </li>
+                        <li>
+                            <Link to="/pca">PCA</Link>
+                        </li>
+                        <li>
+                            <Link to="/evt">EVT</Link>
+                        </li>
+                        <li>
+                            <Link to="/lst">LST</Link>
+                        </li>
+                        <li>
+                            <Link to="/crs">CRS</Link>
+                        </li>
+                        <li>
+                            <Link to="/tab">Tab</Link>
                         </li>
                     </ul>
                 </nav>
