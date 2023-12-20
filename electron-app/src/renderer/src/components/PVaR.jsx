@@ -16,6 +16,12 @@ const PVaR = () => {
     const [cStDev, setCStDev] = useState(state.custom.cStDev);
     const [cSkew, setCSkew] = useState(state.custom.cSkew);
     const [cKurt, setCKurt] = useState(state.custom.cKurt);
+    const [cGamma, setCGamma] = useState(state.custom.cGamma);
+    const [cKsi, setCKsi] = useState(state.custom.cKsi);
+    const [cDelta, setCDelta] = useState(state.custom.cDelta);
+    const [cLambda, setCLambda] = useState(state.custom.cLambda);
+    const [cMu, setCMu] = useState(state.custom.cMu);
+    const [cSigma, setCSigma] = useState(state.custom.cSigma);
     const [cMLE, setCMLE] = useState(state.custom.cMLE);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
@@ -77,42 +83,69 @@ const PVaR = () => {
         const updatedData = orderedData.map((data, index) => {
             if (index === 0) {
                 // First entry, no return calculation possible
-                return { ...data, "OneDayReturn": "N/A" };
-            } else {
+                return { ...data, "Return1D": "N/A", "Return2D": "N/A" };
+            } else if (index === 1) {
                 const previousPrice = parseFloat(initialData[index - 1].Price);
                 const currentPrice = parseFloat(data.Price);
                 const oneDayReturn = ((currentPrice - previousPrice) / previousPrice) * 100;
-                return { ...data, "OneDayReturn": `${oneDayReturn.toFixed(2)}%` };
+                return { ...data, "Return1D": `${oneDayReturn.toFixed(2)}%`, "Return2D": "N/A" };
+            } else {
+                const prevPrevPrice = parseFloat(initialData[index - 2].Price);
+                const previousPrice = parseFloat(initialData[index - 1].Price);
+                const currentPrice = parseFloat(data.Price);
+                const oneDayReturn = ((currentPrice - previousPrice) / previousPrice) * 100;
+                const twoDayReturn = ((currentPrice - prevPrevPrice) / prevPrevPrice) * 100;
+                return { ...data, "Return1D": `${oneDayReturn.toFixed(2)}%`, "Return2D": `${twoDayReturn.toFixed(2)}%` };
             }
         });
 
         const rankedData = updatedData.map((item, index) => {
             if (index === 0) {
                 // First entry, no return calculation possible
-                return { ...item, "Rank": "N/A" };
+                return { ...item, "Rank1D": "N/A" };
             } else {
-                return { ...item, "Rank": index };
+                return { ...item, "Rank1D": index };
             }
         });
 
-        // Sort data by OneDayReturn in ascending order
-        const oneDayReturns = rankedData.map(obj => obj.OneDayReturn)
+        const rankedData2 = rankedData.map((item, index) => {
+            if (index <= 1) {
+                // First entry, no return calculation possible
+                return { ...item, "Rank2D": "N/A" };
+            } else {
+                return { ...item, "Rank2D": index - 1 };
+            }
+        });
 
-        // Sort data by OneDayReturn in ascending order
+        const oneDayReturns = rankedData2.map(obj => obj.Return1D)
+        const twoDayReturns = rankedData2.map(obj => obj.Return2D)
+
+        // Sort data by Return in ascending order
         const oneDayReturnsSorted = oneDayReturns.sort((a, b) => {
             return parseFloat(a) - parseFloat(b);
         });
+        const twoDayReturnsSorted = twoDayReturns.sort((a, b) => {
+            return parseFloat(a) - parseFloat(b);
+        });
 
-        for (let i = 0; i < rankedData.length; i++) {
-            rankedData[i].RankedReturn = oneDayReturnsSorted[i];
+        for (let i = 0; i < rankedData2.length; i++) {
+            rankedData2[i].RankedReturn1D = oneDayReturnsSorted[i];
+            rankedData2[i].RankedReturn2D = twoDayReturnsSorted[i];
+            if (1 === 1) {
+                rankedData2[i].RankedReturn = oneDayReturnsSorted[i];
+            } else {
+                rankedData2[i].RankedReturn = twoDayReturnsSorted[i];
+            }
         }
 
-        const addEmpiricalCDF = rankedData.map((item, index) => {
+        console.log(rankedData2)
+
+        const addEmpiricalCDF = rankedData2.map((item, index) => {
             if (index === 0) {
                 // First entry, no return calculation possible
                 return { ...item, "EmpiricalCDF": "N/A" };
             } else {
-                const empiricalCDF = `${((index / (rankedData.length - 1)) * 100).toFixed(2)}%`
+                const empiricalCDF = `${((index / (rankedData2.length - 1)) * 100).toFixed(2)}%`
                 return { ...item, "EmpiricalCDF": empiricalCDF };
             }
         });
@@ -181,6 +214,7 @@ const PVaR = () => {
             }
         });
 
+        // similar to returns but divide by 100
         const returns2 = addEmpiricalCDF.slice(1).map(item => parseFloat(item.RankedReturn) / 100)
         dispatch({
             type: 'TEXT',
@@ -258,18 +292,16 @@ print(r)
 
         dispatch({
             type: 'CUSTOM',
-            payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": sum }
+            payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": sum, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf }
         });
 
         dispatch({
             type: 'DATA',
-            // payload: JSON.stringify(addJohnsonSUCDF)
             payload: addLogCustomPDF
         });
 
         dispatch({
             type: 'STATS',
-            // payload: JSON.stringify(addJohnsonSUCDF)
             payload: {
                 'mean': mean,
                 'sStDev': sStDev,
@@ -313,12 +345,82 @@ print(r)
         computeStats(SPData)
     }
 
+    const customData = (data) => {
+        // destructure
+        const { cMean, cStDev, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda } = data
+        setCMean(cMean * 100)
+        setCStDev(cStDev * 100)
+        setCSkew(cSkew)
+        setCKurt(cKurt)
+        setCGamma(cGamma)
+        setCKsi(cKsi)
+        setCDelta(cDelta)
+        setCLambda(cLambda)
+        dispatch({
+            type: 'TEXT',
+            payload: `
+        from scipy.stats import johnsonsu
+        r1 = johnsonsu.ppf(${state.percentile / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
+        r2 = johnsonsu.ppf(${1 - state.percentile / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
+        r3 = johnsonsu.ppf(${state.percentile / 100}, ${cGamma}, ${cDelta}, ${cKsi}, ${cLambda})
+        r4 = johnsonsu.ppf(${1 - state.percentile / 100}, ${cGamma}, ${cDelta}, ${cKsi}, ${cLambda})
+        print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"',round(r4*100,2),'%","CileU":"',round(r3*100,2),'%"}', sep='')
+                        `
+        });
+
+        const addCustomCDF = state.data.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "CustomCDF": "N/A" };
+            } else {
+                const customCDF = `${((jStat.normal.cdf(cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda), 0, 1, true)) * 100).toFixed(2)}%`
+                return { ...item, "CustomCDF": customCDF };
+            }
+        });
+
+        const addCustomPDF = addCustomCDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "CustomPDF": "N/A" };
+            } else {
+                const customPDF = `${(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2)).toFixed(2)}`
+                return { ...item, "CustomPDF": customPDF };
+            }
+        });
+
+        const addLogCustomPDF = addCustomPDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "LogCustomPDF": "N/A" };
+            } else {
+                const logCustomPDF = `${(Math.log(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2))).toFixed(2)}`
+                return { ...item, "LogCustomPDF": logCustomPDF };
+            }
+        });
+        let sum = 0;
+        for (let i = 0; i < addLogCustomPDF.length; i++) {
+            if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
+                sum += Number(addLogCustomPDF[i].LogCustomPDF);
+            }
+        }
+        setCMLE(sum)
+        dispatch({
+            type: 'CUSTOM',
+            payload: {
+                cMean: cMean * 100, cStDev: cStDev * 100, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda, cMLE: sum, cMu: state.custom.cMu, cSigma: state.custom.cSigma, cDf: state.custom.cDf
+            }
+        });
+        dispatch({
+            type: 'DATA',
+            payload: addLogCustomPDF
+        });
+    }
+
     useEffect(() => {
         if (state.result.startsWith('{"JileL":')) {
             const data = JSON.parse(state.result)
             dispatch({
                 type: 'JILE',
-                // payload: JSON.stringify(addJohnsonSUCDF)
                 payload: {
                     'JileL': data.JileL,
                     'JileU': data.JileU,
@@ -378,7 +480,6 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
             }
             dispatch({
                 type: 'STATS',
-                // payload: JSON.stringify(addJohnsonSUCDF)
                 payload: {
                     'gamma': data.gamma,
                     'delta': data.delta,
@@ -394,72 +495,7 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         }
         if (state.result.startsWith(`{"cGamma":`)) {
             const data = JSON.parse(state.result)
-            // destructure
-            const { cMean, cStDev, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda } = data
-            setCMean(cMean * 100)
-            setCStDev(cStDev * 100)
-            setCSkew(cSkew)
-            setCKurt(cKurt)
-            dispatch({
-                type: 'TEXT',
-                payload: `
-from scipy.stats import johnsonsu
-r1 = johnsonsu.ppf(${state.percentile / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
-r2 = johnsonsu.ppf(${1 - state.percentile / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
-r3 = johnsonsu.ppf(${state.percentile / 100}, ${cGamma}, ${cDelta}, ${cKsi}, ${cLambda})
-r4 = johnsonsu.ppf(${1 - state.percentile / 100}, ${cGamma}, ${cDelta}, ${cKsi}, ${cLambda})
-print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"',round(r4*100,2),'%","CileU":"',round(r3*100,2),'%"}', sep='')
-                `
-            });
-
-            const addCustomCDF = state.data.map((item, index) => {
-                if (index === 0) {
-                    // First entry, no return calculation possible
-                    return { ...item, "CustomCDF": "N/A" };
-                } else {
-                    const customCDF = `${((jStat.normal.cdf(cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda), 0, 1, true)) * 100).toFixed(2)}%`
-                    return { ...item, "CustomCDF": customCDF };
-                }
-            });
-
-            const addCustomPDF = addCustomCDF.map((item, index) => {
-                if (index === 0) {
-                    // First entry, no return calculation possible
-                    return { ...item, "CustomPDF": "N/A" };
-                } else {
-                    const customPDF = `${(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2)).toFixed(2)}`
-                    return { ...item, "CustomPDF": customPDF };
-                }
-            });
-
-            const addLogCustomPDF = addCustomPDF.map((item, index) => {
-                if (index === 0) {
-                    // First entry, no return calculation possible
-                    return { ...item, "LogCustomPDF": "N/A" };
-                } else {
-                    const logCustomPDF = `${(Math.log(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2))).toFixed(2)}`
-                    return { ...item, "LogCustomPDF": logCustomPDF };
-                }
-            });
-            let sum = 0;
-            for (let i = 0; i < addLogCustomPDF.length; i++) {
-                if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
-                    sum += Number(addLogCustomPDF[i].LogCustomPDF);
-                }
-            }
-            setCMLE(sum)
-            dispatch({
-                type: 'CUSTOM',
-                // payload: JSON.stringify(addJohnsonSUCDF)
-                payload: {
-                    // "cMean": state.result.cMean, "cStDev": state.result.cStDev, "cSkew": state.result.cSkew, "cKurt": state.result.cKurt, "cGamma": state.result.cGamma, "cDelta": state.result.cDelta, "cKsi": state.result.cKsi, "cLambda": state.result.cLambda
-                    cMean: cMean * 100, cStDev: cStDev * 100, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda, cMLE: sum
-                }
-            });
-            dispatch({
-                type: 'DATA',
-                payload: addLogCustomPDF
-            });
+            customData(data)
         }
     }, [state.result])
 
@@ -935,39 +971,37 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
     const handleCMeanChange = (e) => {
         setCMean(Number(e.target.value));
     }
-    // const handleCMeanMouseUp = (e) => {
-    //     dispatch({
-    //         type: 'CUSTOM',
-    //         payload: { "cMean": Number(e.target.value), "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt }
-    //     });
-    // }
     const handleCStDevChange = (e) => {
         setCStDev(Number(e.target.value));
     }
-    // const handleCStDevMouseUp = (e) => {
-    //     dispatch({
-    //         type: 'CUSTOM',
-    //         payload: { "cMean": state.custom.cMean, "cStDev": Number(e.target.value), "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt }
-    //     });
-    // }
     const handleCSkewChange = (e) => {
         setCSkew(Number(e.target.value));
     }
-    // const handleCSkewMouseUp = (e) => {
-    //     dispatch({
-    //         type: 'CUSTOM',
-    //         payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": Number(e.target.value), "cKurt": state.custom.cKurt }
-    //     });
-    // }
     const handleCKurtChange = (e) => {
         setCKurt(Number(e.target.value));
     }
-    // const handleCKurtMouseUp = (e) => {
-    //     dispatch({
-    //         type: 'CUSTOM',
-    //         payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": Number(e.target.value) }
-    //     });
-    // }
+    const handleCGammaChange = (e) => {
+        setCGamma(Number(e.target.value));
+    }
+    const handleCKsiChange = (e) => {
+        setCKsi(Number(e.target.value));
+    }
+    const handleCDeltaChange = (e) => {
+        setCDelta(Number(e.target.value));
+    }
+    const handleCLambdaChange = (e) => {
+        setCLambda(Number(e.target.value));
+    }
+    const handleCMuChange = (e) => {
+        setCMu(Number(e.target.value));
+    }
+    const handleCSigmaChange = (e) => {
+        setCSigma(Number(e.target.value));
+    }
+    const handleCDfChange = (e) => {
+        setCDf(Number(e.target.value));
+    }
+
 
     const hidePercentiles = () => {
         dispatch({
@@ -977,73 +1011,16 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
     }
 
     const reset = () => {
-        const cGamma = 0
-        const cKsi = 0
-        const cDelta = 5.521765
-        const cLambda = 0.054318
-        setCMean(0)
-        setCStDev(1)
-        setCSkew(0)
-        setCKurt(3)
-        dispatch({
-            type: 'TEXT',
-            payload: `
-from scipy.stats import johnsonsu
-r1 = johnsonsu.ppf(${state.percentile / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
-r2 = johnsonsu.ppf(${1 - state.percentile / 100}, ${state.stats.gamma}, ${state.stats.delta}, ${state.stats.ksi}, ${state.stats.lambda})
-r3 = johnsonsu.ppf(${state.percentile / 100}, ${cGamma}, ${cDelta}, ${cKsi}, ${cLambda})
-r4 = johnsonsu.ppf(${1 - state.percentile / 100}, ${cGamma}, ${cDelta}, ${cKsi}, ${cLambda})
-print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"',round(r4*100,2),'%","CileU":"',round(r3*100,2),'%"}', sep='')
-            `
-        });
-
-        const addCustomCDF = state.data.map((item, index) => {
-            if (index === 0) {
-                // First entry, no return calculation possible
-                return { ...item, "CustomCDF": "N/A" };
-            } else {
-                const customCDF = `${((jStat.normal.cdf(cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda), 0, 1, true)) * 100).toFixed(2)}%`
-                return { ...item, "CustomCDF": customCDF };
-            }
-        });
-
-        const addCustomPDF = addCustomCDF.map((item, index) => {
-            if (index === 0) {
-                // First entry, no return calculation possible
-                return { ...item, "CustomPDF": "N/A" };
-            } else {
-                const customPDF = `${(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2)).toFixed(2)}`
-                return { ...item, "CustomPDF": customPDF };
-            }
-        });
-
-        const addLogCustomPDF = addCustomPDF.map((item, index) => {
-            if (index === 0) {
-                // First entry, no return calculation possible
-                return { ...item, "LogCustomPDF": "N/A" };
-            } else {
-                const logCustomPDF = `${(Math.log(cDelta / (cLambda * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * (cGamma + cDelta * Math.asinh(((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda)) ** 2) / Math.sqrt(1 + (((parseFloat(item.RankedReturn) / 100) - cKsi) / cLambda) ** 2))).toFixed(2)}`
-                return { ...item, "LogCustomPDF": logCustomPDF };
-            }
-        });
-
-        let sum = 0;
-        for (let i = 0; i < addLogCustomPDF.length; i++) {
-            if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
-                sum += Number(addLogCustomPDF[i].LogCustomPDF);
-            }
+        const data = { cMean: 0, cStDev: 0.01, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318 }
+        if (distOption === 'custom') {
+            customData(data)
+        } else if (distOption === 'normal') {
+            console.log('normal')
+        } else if (distOption === 'studentt') {
+            console.log('studentt')
+        } else if (distOption === 'johnsonsu') {
+            customData(data)
         }
-        setCMLE(sum)
-
-        dispatch({
-            type: 'CUSTOM',
-            payload: { "cMean": 0, "cStDev": 1, "cSkew": 0, "cKurt": 3, "cGamma": cGamma, "cKsi": cKsi, "cDelta": cDelta, "cLambda": cLambda, "cMLE": sum }
-        });
-
-        dispatch({
-            type: 'DATA',
-            payload: addLogCustomPDF
-        });
     }
 
     const undo = () => {
@@ -1051,13 +1028,14 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
     }
 
     const customSolve = () => {
-        dispatch({
-            type: 'CUSTOM',
-            payload: { "cMean": cMean, "cStDev": cStDev, "cSkew": cSkew, "cKurt": cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE }
-        });
-        dispatch({
-            type: 'TEXT',
-            payload: `
+        if (distOption === 'custom') {
+            dispatch({
+                type: 'CUSTOM',
+                payload: { "cMean": cMean, "cStDev": cStDev, "cSkew": cSkew, "cKurt": cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf }
+            });
+            dispatch({
+                type: 'TEXT',
+                payload: `
 import numpy as np
 # import math
 import json
@@ -1068,7 +1046,7 @@ def objective(x):
     cMean = x[1]-x[3]*np.exp((x[2]**-2)/2)*np.sinh(x[0]/x[2])
     cStDev = np.sqrt(x[3]**2/2*(np.exp(x[2]**-2)-1)*(np.exp(x[2]**-2)*np.cosh(2*x[0]/x[2])+1))
     cSkew = -(x[3]**3*np.sqrt(np.exp(x[2]**-2))*(np.exp(x[2]**-2)-1)**2*(np.exp(x[2]**-2)*(np.exp(x[2]**-2)+2)*np.sinh(3*x[0]/x[2])+3*np.sinh(2*x[0]/x[2])))/(4*(cStDev**2)**1.5)
-    k1 = (np.exp(x[2]**-2))**2*((np.exp(x[2]**-2))**4+2*(np.exp(x[2]**-2))**3+2*(np.exp(x[2]**-2))**2-3)*np.cosh(4*x[0]/x[2])
+    k1 = (np.exp(x[2]**-2))**2*((np.exp(x[2]**-2))**4+2*(np.exp(x[2]**-2))**3+3*(np.exp(x[2]**-2))**2-3)*np.cosh(4*x[0]/x[2])
     k2 = 4*(np.exp(x[2]**-2))**2*((np.exp(x[2]**-2))+2)*np.cosh(3*x[0]/x[2])
     k3 = 3*(2*(np.exp(x[2]**-2))+1)
     cKurt = (x[3]**4*(np.exp(x[2]**-2)-1)**2*(k1+k2+k3))/(8*(cStDev**2)**2)
@@ -1085,7 +1063,7 @@ sol = minimize(objective,x0,method='SLSQP',bounds=bnds)
 cMean = sol.x[1]-sol.x[3]*np.exp((sol.x[2]**-2)/2)*np.sinh(sol.x[0]/sol.x[2])
 cStDev = np.sqrt(sol.x[3]**2/2*(np.exp(sol.x[2]**-2)-1)*(np.exp(sol.x[2]**-2)*np.cosh(2*sol.x[0]/sol.x[2])+1))
 cSkew = -(sol.x[3]**3*np.sqrt(np.exp(sol.x[2]**-2))*(np.exp(sol.x[2]**-2)-1)**2*(np.exp(sol.x[2]**-2)*(np.exp(sol.x[2]**-2)+2)*np.sinh(3*sol.x[0]/sol.x[2])+3*np.sinh(2*sol.x[0]/sol.x[2])))/(4*(cStDev**2)**1.5)
-k1 = (np.exp(sol.x[2]**-2))**2*((np.exp(sol.x[2]**-2))**4+2*(np.exp(sol.x[2]**-2))**3+2*(np.exp(sol.x[2]**-2))**2-3)*np.cosh(4*sol.x[0]/sol.x[2])
+k1 = (np.exp(sol.x[2]**-2))**2*((np.exp(sol.x[2]**-2))**4+2*(np.exp(sol.x[2]**-2))**3+3*(np.exp(sol.x[2]**-2))**2-3)*np.cosh(4*sol.x[0]/sol.x[2])
 k2 = 4*(np.exp(sol.x[2]**-2))**2*((np.exp(sol.x[2]**-2))+2)*np.cosh(3*sol.x[0]/sol.x[2])
 k3 = 3*(2*(np.exp(sol.x[2]**-2))+1)
 cKurt = (sol.x[3]**4*(np.exp(sol.x[2]**-2)-1)**2*(k1+k2+k3))/(8*(cStDev**2)**2)
@@ -1093,10 +1071,23 @@ sol = {"cGamma": sol.x[0], "cDelta": sol.x[2], "cKsi": sol.x[1], "cLambda": sol.
 sol = json.dumps(sol)
 print(sol)
             `
-        });
+            });
+        } else if (distOption === 'normal') {
+            console.log('normal')
+        } else if (distOption === 'studentt') {
+            console.log('studentt')
+        } else if (distOption === 'johnsonsu') {
+            const cMean = cKsi - cLambda * Math.exp((cDelta ** -2) / 2) * Math.sinh(cGamma / cDelta)
+            const cStDev = Math.sqrt(cLambda ** 2 / 2 * (Math.exp(cDelta ** -2) - 1) * (Math.exp(cDelta ** -2) * Math.cosh(2 * cGamma / cDelta) + 1))
+            const cSkew = -(cLambda ** 3 * Math.sqrt(Math.exp(cDelta ** -2)) * (Math.exp(cDelta ** -2) - 1) ** 2 * (Math.exp(cDelta ** -2) * (Math.exp(cDelta ** -2) + 2) * Math.sinh(3 * cGamma / cDelta) + 3 * Math.sinh(2 * cGamma / cDelta))) / (4 * (cStDev ** 2) ** 1.5)
+            const k1 = (Math.exp(cDelta ** -2)) ** 2 * ((Math.exp(cDelta ** -2)) ** 4 + 2 * (Math.exp(cDelta ** -2)) ** 3 + 3 * (Math.exp(cDelta ** -2)) ** 2 - 3) * Math.cosh(4 * cGamma / cDelta)
+            const k2 = 4 * (Math.exp(cDelta ** -2)) ** 2 * ((Math.exp(cDelta ** -2)) + 2) * Math.cosh(3 * cGamma / cDelta)
+            const k3 = 3 * (2 * (Math.exp(cDelta ** -2)) + 1)
+            const cKurt = (cLambda ** 4 * (Math.exp(cDelta ** -2) - 1) ** 2 * (k1 + k2 + k3)) / (8 * (cStDev ** 2) ** 2)
+            const data = { cMean: cMean, cStDev: cStDev, cSkew: cSkew, cKurt: cKurt, cGamma: cGamma, cKsi: cKsi, cDelta: cDelta, cLambda: cLambda }
+            customData(data)
+        }
     }
-
-    console.log(state.custom)
 
     const handleCheckbox = (x) => {
         let array = [...state.fix]
@@ -1144,8 +1135,6 @@ print(sol)
     }
 
     const visibility = state.data.length != 0 ? 'visible' : 'hidden'
-
-    console.log(state.isHidden[1])
 
     return (
         <div>
@@ -1212,7 +1201,9 @@ print(sol)
                                 <div style={gridItem}>{(state.stats.sSkew).toFixed(2)}</div>
                                 <div style={gridItem}>ExKurt</div>
                                 <div style={gridItem}>{(state.stats.sKurt).toFixed(2)}</div>
-                                <div style={gridItem}>TDist DoF</div>
+                                <div style={gridItem}><b className="tooltip">&#9432; <span className="tooltiptext">Computed using Method of Moments around the ExKurt (4th Moment/2nd moment squared)</span></b>TDist DoF
+
+                                </div>
                                 <div style={gridItem}>{(state.stats.df).toFixed(2)}</div>
                             </div>
                         </div>
@@ -1270,135 +1261,205 @@ print(sol)
                                 paddingLeft: '10px',
                                 paddingRight: '10px'
                             }}>
-                                <div />
-                                <button onClick={reset}>Reset</button>
-                                <div />
-                                <div style={gridItem}>Flex?</div>
-                                <div style={state.fix[0] ? gridItem2 : gridItem}>Mean</div>
-                                <div style={state.fix[0] ? gridItem2 : gridItem}>{`${(cMean).toFixed(2)}%`}</div>
-                                <div style={state.fix[0] ? gridItem2 : gridItem}>
-                                    <input type="range" min={state.stats.mean - state.stats.sStDev * 100} max={state.stats.mean + state.stats.sStDev * 100} value={cMean} step={0.1} onChange={(value) => handleCMeanChange(value)} disabled={state.fix[0]} />
-                                </div>
-                                <div style={state.fix[0] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[0]} onChange={() => handleCheckbox(0)} /></div>
-                                {/* <div style={gridItem}><input type="checkbox" /></div> */}
-                                <div style={state.fix[1] ? gridItem2 : gridItem}>StDev</div>
-                                <div style={state.fix[1] ? gridItem2 : gridItem}>{`${(cStDev).toFixed(2)}%`}</div>
-                                <div style={state.fix[1] ? gridItem2 : gridItem}>
-                                    <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 3} value={cStDev} step={0.1} onChange={(value) => handleCStDevChange(value)} disabled={state.fix[1]} />
-                                </div>
-                                <div style={state.fix[1] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[1]} onChange={() => handleCheckbox(1)} /></div>
-                                <div style={state.fix[2] ? gridItem2 : gridItem}>Skew</div>
-                                <div style={state.fix[2] ? gridItem2 : gridItem}>{(cSkew).toFixed(2)}</div>
-                                <div style={state.fix[2] ? gridItem2 : gridItem}>
-                                    <input type="range" min={-3} max={3} value={cSkew} step={0.1} onChange={(value) => handleCSkewChange(value)} disabled={state.fix[2]} />
-                                </div>
-                                <div style={state.fix[2] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[2]} onChange={() => handleCheckbox(2)} /></div>
-                                <div style={state.fix[3] ? gridItem2 : gridItem}>ExKurt</div>
-                                <div style={state.fix[3] ? gridItem2 : gridItem}>{(cKurt).toFixed(2)}</div>
-                                <div style={state.fix[3] ? gridItem2 : gridItem}>
-                                    <input type="range" min={3} max={30} value={cKurt} step={0.5} onChange={(value) => handleCKurtChange(value)} disabled={state.fix[3]} />
-                                </div>
-                                <div style={state.fix[3] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[3]} onChange={() => handleCheckbox(3)} /></div>
-                                <div style={gridItem}>MLE</div>
-                                {/* <div style={gridItem}>3000</div> */}
-                                <div style={gridItem}>{(cMLE).toFixed(2)}</div>
-                                <button onClick={customSolve}>Optimise/Solve</button>
-                                <button onClick={undo}>Undo</button>
+                                {distOption === 'custom' && (
+                                    <>
+                                        <div />
+                                        <button onClick={reset}>Reset</button>
+                                        <div />
+                                        <div style={gridItem}>Flex?</div>
+                                        <div style={state.fix[0] ? gridItem2 : gridItem}>Mean</div>
+                                        <div style={state.fix[0] ? gridItem2 : gridItem}>{`${(cMean).toFixed(2)}%`}</div>
+                                        <div style={state.fix[0] ? gridItem2 : gridItem}>
+                                            <input type="range" min={state.stats.mean - state.stats.sStDev * 100} max={state.stats.mean + state.stats.sStDev * 100} value={cMean} step={0.1} onChange={(value) => handleCMeanChange(value)} disabled={state.fix[0]} />
+                                        </div>
+                                        <div style={state.fix[0] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[0]} onChange={() => handleCheckbox(0)} /></div>
+                                        <div style={state.fix[1] ? gridItem2 : gridItem}>StDev</div>
+                                        <div style={state.fix[1] ? gridItem2 : gridItem}>{`${(cStDev).toFixed(2)}%`}</div>
+                                        <div style={state.fix[1] ? gridItem2 : gridItem}>
+                                            <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 3} value={cStDev} step={0.1} onChange={(value) => handleCStDevChange(value)} disabled={state.fix[1]} />
+                                        </div>
+                                        <div style={state.fix[1] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[1]} onChange={() => handleCheckbox(1)} /></div>
+                                        <div style={state.fix[2] ? gridItem2 : gridItem}>Skew</div>
+                                        <div style={state.fix[2] ? gridItem2 : gridItem}>{(cSkew).toFixed(2)}</div>
+                                        <div style={state.fix[2] ? gridItem2 : gridItem}>
+                                            <input type="range" min={-3} max={3} value={cSkew} step={0.1} onChange={(value) => handleCSkewChange(value)} disabled={state.fix[2]} />
+                                        </div>
+                                        <div style={state.fix[2] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[2]} onChange={() => handleCheckbox(2)} /></div>
+                                        <div style={state.fix[3] ? gridItem2 : gridItem}>ExKurt</div>
+                                        <div style={state.fix[3] ? gridItem2 : gridItem}>{(cKurt).toFixed(2)}</div>
+                                        <div style={state.fix[3] ? gridItem2 : gridItem}>
+                                            <input type="range" min={3} max={30} value={cKurt} step={0.5} onChange={(value) => handleCKurtChange(value)} disabled={state.fix[3]} />
+                                        </div>
+                                        <div style={state.fix[3] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[3]} onChange={() => handleCheckbox(3)} /></div>
+
+                                        <div style={gridItem}>MLE</div>
+                                        <div style={gridItem}>{(cMLE).toFixed(2)}</div>
+                                        <button onClick={customSolve}>Optimise/Solve</button>
+                                        <button onClick={undo}>Undo</button>
+                                    </>
+                                )}
+                                {distOption === 'normal' && (
+                                    <>
+                                        <div />
+                                        <button onClick={reset}>Reset</button>
+                                        <div />
+                                        <div />
+                                        <div style={gridItem}>Mu</div>
+                                        <div style={gridItem}>{(cMu).toFixed(4)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={-2} max={2} value={cMu} step={0.1} onChange={(value) => handleCMuChange(value)} />
+                                        </div>
+                                        <div />
+                                        <div style={gridItem}>Sigma^2</div>
+                                        <div style={gridItem}>{(cSigma).toFixed(4)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={-0.05} max={0.05} value={cSigma} step={0.002} onChange={(value) => handleCSigmaChange(value)} />
+                                        </div>
+                                        <div />
+                                        <div style={gridItem}>MLE</div>
+                                        <div style={gridItem}>{(cMLE).toFixed(2)}</div>
+                                        <button onClick={customSolve}>Optimise/Solve</button>
+                                        <div />
+                                    </>
+                                )}
+                                {distOption === 'studentt' && (
+                                    <>
+                                    </>
+                                )}
+                                {distOption === 'johnsonsu' && (
+                                    <>
+                                        <div />
+                                        <button onClick={reset}>Reset</button>
+                                        <div />
+                                        <div />
+                                        <div style={gridItem}>Gamma</div>
+                                        <div style={gridItem}>{(cGamma).toFixed(4)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={-2} max={2} value={cGamma} step={0.1} onChange={(value) => handleCGammaChange(value)} />
+                                        </div>
+                                        <div />
+                                        <div style={gridItem}>Ksi</div>
+                                        <div style={gridItem}>{(cKsi).toFixed(4)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={-0.05} max={0.05} value={cKsi} step={0.002} onChange={(value) => handleCKsiChange(value)} />
+                                        </div>
+                                        <div />
+                                        <div style={gridItem}>Delta</div>
+                                        <div style={gridItem}>{(cDelta).toFixed(4)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={0} max={10} value={cDelta} step={0.1} onChange={(value) => handleCDeltaChange(value)} />
+                                        </div>
+                                        <div />
+                                        <div style={gridItem}>Lambda</div>
+                                        <div style={gridItem}>{(cLambda).toFixed(4)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={0} max={0.1} value={cLambda} step={0.002} onChange={(value) => handleCLambdaChange(value)} />
+                                        </div>
+                                        <div />
+
+                                        <div style={gridItem}>MLE</div>
+                                        <div style={gridItem}>{(cMLE).toFixed(2)}</div>
+                                        <button onClick={customSolve}>Optimise/Solve</button>
+                                        <div />
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'auto auto',
-                paddingLeft: '10px',
-                visibility: visibility
-            }}>
-                <div>
-                    <h1>PDFs</h1>
-                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>
-                        Number of bins: {numBins} <input type="range" min={3} max={250} value={numBins} onMouseUp={(value) => handleNumBinsMouseUp(value)} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
-                    </label>
-                    <div style={{
-                        width: '500px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        color: 'rgba(0, 0, 0, 1.0)',
-                        padding: '10px'
-                    }}>
-                        <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '388px', lineHeight: '26px', marginBottom: '10px' }}>
-                            Percentile: {percentile}% <input type="range" min={90} max={99.9} value={percentile} step={0.1} onMouseUp={(value) => handlePercentileMouseUp(value)} onChange={(value) => handlePercentileChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
-                            <button onClick={hidePercentiles}>{state.isHiddenP ? 'Show' : `'Hide'`}</button>
+            {state.stats.mean && (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'auto auto',
+                    paddingLeft: '10px',
+                    visibility: visibility
+                }}>
+                    <div>
+                        <h1>PDFs</h1>
+                        <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>
+                            Number of bins: {numBins} <input type="range" min={3} max={250} value={numBins} onMouseUp={(value) => handleNumBinsMouseUp(value)} onChange={(value) => handleNumBinsChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
                         </label>
-
                         <div style={{
-                            width: '480px',
+                            width: '500px',
                             backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                            display: 'grid',
-                            gridTemplateColumns: '80px 80px 80px 80px 80px 80px',
+                            color: 'rgba(0, 0, 0, 1.0)',
                             padding: '10px'
                         }}>
-                            <div style={gridItem}>Dist.</div>
+                            <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '388px', lineHeight: '26px', marginBottom: '10px' }}>
+                                Percentile: {percentile}% <input type="range" min={90} max={99.9} value={percentile} step={0.1} onMouseUp={(value) => handlePercentileMouseUp(value)} onChange={(value) => handlePercentileChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} />
+                                <button onClick={hidePercentiles}>{state.isHiddenP ? 'Show' : `'Hide'`}</button>
+                            </label>
+
+                            <div style={{
+                                width: '480px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                display: 'grid',
+                                gridTemplateColumns: '80px 80px 80px 80px 80px 80px',
+                                padding: '10px'
+                            }}>
+                                <div style={gridItem}>Dist.</div>
+                                <div style={gridItem}>Empirical</div>
+                                <div style={gridItem}>Normal</div>
+                                <div style={gridItem}>Student T</div>
+                                <div style={gridItem}>Johnson SU</div>
+                                <div style={gridItem}>Custom</div>
+                                <div style={gridItem}>Lower %ile</div>
+                                <div style={gridItem}>{state.stats.EileL}</div>
+                                <div style={gridItem}>{state.stats.NileL}</div>
+                                <div style={gridItem}>{state.stats.TileL}</div>
+                                <div style={gridItem}>{state.stats.JileL}</div>
+                                <div style={gridItem}>{state.stats.CileL}</div>
+                                <div style={gridItem}>Upper %ile</div>
+                                <div style={gridItem}>{state.stats.EileU}</div>
+                                <div style={gridItem}>{state.stats.NileU}</div>
+                                <div style={gridItem}>{state.stats.TileU}</div>
+                                <div style={gridItem}>{state.stats.JileU}</div>
+                                <div style={gridItem}>{state.stats.CileU}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h1>CDFs</h1>
+                        <h2>K-S Tests</h2>
+                        <div style={{
+                            width: '400px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            display: 'grid',
+                            gridTemplateColumns: '80px 80px 80px 80px 80px',
+                            padding: '10px'
+                        }}>
                             <div style={gridItem}>Empirical</div>
                             <div style={gridItem}>Normal</div>
                             <div style={gridItem}>Student T</div>
                             <div style={gridItem}>Johnson SU</div>
                             <div style={gridItem}>Custom</div>
-                            <div style={gridItem}>Lower %ile</div>
-                            <div style={gridItem}>{state.stats.EileL}</div>
-                            <div style={gridItem}>{state.stats.NileL}</div>
-                            <div style={gridItem}>{state.stats.TileL}</div>
-                            <div style={gridItem}>{state.stats.JileL}</div>
-                            <div style={gridItem}>{state.stats.CileL}</div>
-                            <div style={gridItem}>Upper %ile</div>
-                            <div style={gridItem}>{state.stats.EileU}</div>
-                            <div style={gridItem}>{state.stats.NileU}</div>
-                            <div style={gridItem}>{state.stats.TileU}</div>
-                            <div style={gridItem}>{state.stats.JileU}</div>
-                            <div style={gridItem}>{state.stats.CileU}</div>
+                            <div style={gridItem}>1</div>
+                            <div style={gridItem}>2</div>
+                            <div style={gridItem}>3</div>
+                            <div style={gridItem}>4</div>
+                            <div style={gridItem}>5</div>
                         </div>
                     </div>
-                </div>
-                <div>
-                    <h1>CDFs</h1>
-                    <h2>K-S Tests</h2>
-                    <div style={{
-                        width: '400px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                        display: 'grid',
-                        gridTemplateColumns: '80px 80px 80px 80px 80px',
-                        padding: '10px'
-                    }}>
-                        <div style={gridItem}>Empirical</div>
-                        <div style={gridItem}>Normal</div>
-                        <div style={gridItem}>Student T</div>
-                        <div style={gridItem}>Johnson SU</div>
-                        <div style={gridItem}>Custom</div>
-                        <div style={gridItem}>1</div>
-                        <div style={gridItem}>2</div>
-                        <div style={gridItem}>3</div>
-                        <div style={gridItem}>4</div>
-                        <div style={gridItem}>5</div>
+                    <div style={{ width: '45vw', height: '50vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>
+                    <div style={{ width: '45vw', height: '50vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartCDF}></canvas> : `Loading...`}</div>
+                    <div>
+                        <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MinX: {minX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={minX} step={0.2} onMouseUp={(value) => handleMinXMouseUp(value)} onChange={(value) => handleMinXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
+                        <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MaxX: {maxX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={maxX} step={0.2} onMouseUp={(value) => handleMaxXMouseUp(value)} onChange={(value) => handleMaxXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
                     </div>
+                    <div></div>
+                    <div>
+                        <h1 style={{ margin: '5px 0px', }}>ACF Resids <b className="tooltip">&#9432; <span className="tooltiptext">AutoCorrelation Tests: Check if past observations influence your current observations. If so, this violates the Gauss-Markov theorem and therefore your sample estimators are inherently biased. Thus using PVaR is not appropriate (See FHS tab for alternative)</span></b></h1>
+                        <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
+                    </div>
+                    <div>
+                        <h1 style={{ margin: '5px 0px', }}>ARCH Resid^2 <b className="tooltip">&#9432; <span className="tooltiptext">AutoRegressive Conditional Heteroskedasticity (ARCH) Test: Check if the variance of the residuals (error terms) are constant. If not then the standard error of the sample estimators might be high which can lead to failing to reject the null hypothesis when it is false (type 2 error). Thus using PVaR is not appropriate (See FHS tab for alternative)</span></b></h1>
+                        <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
+                    </div>
+                    <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>
+                    <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartCDF}></canvas> : `Loading...`}</div>
                 </div>
-                <div style={{ width: '45vw', height: '50vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>
-                <div style={{ width: '45vw', height: '50vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartCDF}></canvas> : `Loading...`}</div>
-                <div>
-                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MinX: {minX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={minX} step={0.2} onMouseUp={(value) => handleMinXMouseUp(value)} onChange={(value) => handleMinXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
-                    <label style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', textAlign: 'right', width: '360px', lineHeight: '26px', marginBottom: '10px' }}>MaxX: {maxX}% <input type="range" min={state.ranges.minXData} max={state.ranges.maxXData} value={maxX} step={0.2} onMouseUp={(value) => handleMaxXMouseUp(value)} onChange={(value) => handleMaxXChange(value)} style={{ height: '20px', flex: '0 0 200px', marginLeft: '10px' }} /></label>
-                </div>
-                <div></div>
-                <div>
-                    <h1 style={{ margin: '5px 0px', }}>ACF Residuals</h1>
-                    <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
-                </div>
-                <div>
-                    <h1 style={{ margin: '5px 0px', }}>ACF Residuals^2</h1>
-                    <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
-                </div>
-                <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>
-                <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartCDF}></canvas> : `Loading...`}</div>
-            </div>
+            )}
 
             {state.data.length != 0 && (
                 <div style={{
@@ -1429,13 +1490,28 @@ print(sol)
                             <thead>
                                 <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
                                     <th style={{ border: '1px solid black', padding: '0px 29px' }}>Date</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Price</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Risk Factor</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Tenor</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Quote Type</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Return Period</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>VaR Model</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Sample Size</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>VaR</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>FTM <b className="tooltip">&#9432; <span className="tooltiptext">Fat Tail Multiplier (FTM): take the custom percentile and divide it by the custom standard deviation (assumes the mean is 0)</span></b></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr style={rowStyles}>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>05-Nov-18</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>2738.31</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>01-Nov-23</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>SP500</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>0</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>Price</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>1</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>Parametric</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>1000</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>5.4</td>
+                                    {/* replace next line code with custom FTM */}
+                                    <td style={{ border: '1px solid black', padding: '0px 16px', color: 'black' }}>{(Number(jStat.studentt.inv(1 - percentile / 100, state.stats.df)) * Math.sqrt((state.stats.df - 2) / state.stats.df)).toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1448,7 +1524,7 @@ print(sol)
                                 <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
                                     <th style={{ border: '1px solid black', padding: '0px 29px' }}>Date</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>Price</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>OneDay Return</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Return</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>Rank</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>Returns Ranked</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>Empirical CDF</th>
@@ -1469,11 +1545,12 @@ print(sol)
                                     <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
                                         <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Date}</td>
                                         <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Price}</td>
-                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.OneDayReturn}</td>
-                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank}</td>
+                                        {1 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Return1D}</td>}
+                                        {1 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank1D}</td>}
+                                        {0 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Return2D}</td>}
+                                        {0 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank2D}</td>}
                                         <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.RankedReturn}</td>
                                         <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.EmpiricalCDF}</td>
-                                        {console.log(state.isHidden[1])}
                                         {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalCDF}</td>}
                                         {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTCDF}</td>}
                                         {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUCDF}</td>}

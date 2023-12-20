@@ -32,7 +32,7 @@ function Header() {
                             <Link to="/evt">EVT</Link>
                         </li>
                         <li>
-                            <Link to="/lst">LST</Link>
+                            <Link to="/liq">LIQ</Link>
                         </li>
                         <li>
                             <Link to="/crs">CRS</Link>
