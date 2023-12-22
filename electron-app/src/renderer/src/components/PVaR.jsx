@@ -22,7 +22,10 @@ const PVaR = () => {
     const [cLambda, setCLambda] = useState(state.custom.cLambda);
     const [cMu, setCMu] = useState(state.custom.cMu);
     const [cSigma, setCSigma] = useState(state.custom.cSigma);
+    const [cDf, setCDf] = useState(state.custom.cDf);
     const [cMLE, setCMLE] = useState(state.custom.cMLE);
+    const [cNormMLE, setCNormMLE] = useState(state.custom.cNormMLE);
+    const [cStudtMLE, setCStudtMLE] = useState(state.custom.cStudtMLE);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
     // save to csv
@@ -138,8 +141,6 @@ const PVaR = () => {
             }
         }
 
-        console.log(rankedData2)
-
         const addEmpiricalCDF = rankedData2.map((item, index) => {
             if (index === 0) {
                 // First entry, no return calculation possible
@@ -162,11 +163,16 @@ const PVaR = () => {
         const EileL = `${Number(jStat.percentile(returns, 1 - percentile / 100)).toFixed(2)}%`
         const JileL = `Loading...`
         const CileL = `Loading...`
+        const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+        const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, cDf)).toFixed(2)}%`
         const NileU = `${Number(jStat.normal.inv(percentile / 100, mean, sStDev * 100)).toFixed(2)}%`
         const TileU = `${Number(jStat.studentt.inv(percentile / 100, df)).toFixed(2)}%`
         const EileU = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
         const JileU = `Loading...`
         const CileU = `Loading...`
+        const CNileU = `${Number(jStat.normal.inv(percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+        const CTileU = `${Number(jStat.studentt.inv(percentile / 100, cDf)).toFixed(2)}%`
+
 
 
         const [bins2, minReturn, maxReturn, binWidth] = ComputeBins(returns)
@@ -237,7 +243,7 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "NormalPDF": "N/A" };
             } else {
-                const normalPDF = `${((jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, mean, sStDev))).toFixed(2)}`
+                const normalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, mean, sStDev)).toFixed(2)}`
                 return { ...item, "NormalPDF": normalPDF };
             }
         });
@@ -247,7 +253,7 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "StudentTPDF": "N/A" };
             } else {
-                const studentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((df - 2) / df)), df)) * 100).toFixed(2)}%`
+                const studentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((df - 2) / df)), df)) * 100).toFixed(2)}`
                 return { ...item, "StudentTPDF": studentTPDF };
             }
         });
@@ -282,22 +288,101 @@ print(r)
             }
         });
 
-        let sum = 0;
+        const addCustomNormalCDF = addLogCustomPDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "CustomNormalCDF": "N/A" };
+            } else {
+                const customNormalCDF = `${((jStat.normal.cdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma, true)) * 100).toFixed(2)}%`
+                return { ...item, "CustomNormalCDF": customNormalCDF };
+            }
+        });
+
+        const addCustomNormalPDF = addCustomNormalCDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "CustomNormalPDF": "N/A" };
+            } else {
+                const customNormalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma)).toFixed(2)}`
+                return { ...item, "CustomNormalPDF": customNormalPDF };
+            }
+        });
+
+        const addLogCustomNormalPDF = addCustomNormalPDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "LogCustomNormalPDF": "N/A" };
+            } else {
+                const logCustomNormalPDF = `${(Math.log(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma))).toFixed(2)}`
+                return { ...item, "LogCustomNormalPDF": logCustomNormalPDF };
+            }
+        });
+
+        const addCustomStudentTCDF = addLogCustomNormalPDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "CustomStudentTCDF": "N/A" };
+            } else {
+                const customStudentTCDF = `${((jStat.studentt.cdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}%`
+                return { ...item, "CustomStudentTCDF": customStudentTCDF };
+            }
+        });
+
+        const addCustomStudentTPDF = addCustomStudentTCDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "CustomStudentTPDF": "N/A" };
+            } else {
+                const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}`
+                return { ...item, "CustomStudentTPDF": customStudentTPDF };
+            }
+        });
+
+        const addLogCustomStudentTPDF = addCustomStudentTPDF.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "LogCustomStudentTPDF": "N/A" };
+            } else {
+                const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100)).toFixed(2)}`
+                return { ...item, "LogCustomStudentTPDF": LogCustomStudentTPDF };
+            }
+        });
+
+        let sum1 = 0;
         for (let i = 0; i < addLogCustomPDF.length; i++) {
             if (addLogCustomPDF[i].LogCustomPDF != "N/A") {
-                sum += Number(addLogCustomPDF[i].LogCustomPDF);
+                sum1 += Number(addLogCustomPDF[i].LogCustomPDF);
             }
         }
-        setCMLE(sum)
+        console.log(sum1)
+        setCMLE(sum1)
+        let sum2 = 0;
+        for (let i = 0; i < addLogCustomNormalPDF.length; i++) {
+            if (addLogCustomNormalPDF[i].LogCustomNormalPDF != "N/A") {
+                sum2 += Number(addLogCustomNormalPDF[i].LogCustomNormalPDF);
+            }
+        }
+        console.log(sum2)
+        setCNormMLE(sum2)
+        let sum3 = 0;
+        for (let i = 0; i < addLogCustomStudentTPDF.length; i++) {
+            if (addLogCustomStudentTPDF[i].LogCustomStudentTPDF != "N/A") {
+                sum3 += Number(addLogCustomStudentTPDF[i].LogCustomStudentTPDF);
+            }
+        }
+        console.log(sum3)
+        setCStudtMLE(sum3)
+
+        console.log(addLogCustomStudentTPDF)
 
         dispatch({
             type: 'CUSTOM',
-            payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": sum, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf }
+            payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": sum1, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf, "cNormMLE": sum2, "cStudtMLE": sum3 }
         });
 
         dispatch({
             type: 'DATA',
-            payload: addLogCustomPDF
+            payload: addLogCustomStudentTPDF
         });
 
         dispatch({
@@ -407,7 +492,7 @@ print(r)
         dispatch({
             type: 'CUSTOM',
             payload: {
-                cMean: cMean * 100, cStDev: cStDev * 100, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda, cMLE: sum, cMu: state.custom.cMu, cSigma: state.custom.cSigma, cDf: state.custom.cDf
+                cMean: cMean * 100, cStDev: cStDev * 100, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda, cMLE: sum, cMu: state.custom.cMu, cSigma: state.custom.cSigma, cDf: state.custom.cDf, cNormMLE: state.custom.cNormMLE, cStudtMLE: state.custom.cStudtMLE
             }
         });
         dispatch({
@@ -627,6 +712,8 @@ print(r)
                 const johnsonSUPDF = state.data.map((item) => item.JohnsonSUPDF.replace('%', ''));
                 const studentTPDF = state.data.map((item) => item.StudentTPDF.replace('%', ''));
                 const customPDF = state.data.map((item) => item.CustomPDF.replace('%', ''));
+                const customNormalPDF = state.data.map((item) => item.CustomNormalPDF.replace('%', ''));
+                const customStudentTPDF = state.data.map((item) => item.CustomStudentTPDF.replace('%', ''));
 
                 const chartCDFData = {
                     labels: rankedReturns,
@@ -715,7 +802,7 @@ print(r)
                         {
                             type: 'line',
                             label: 'Custom',
-                            data: customPDF,
+                            data: distOption === 'custom' ? customPDF : distOption === 'normal' ? customNormalPDF : customStudentTPDF,
                             backgroundColor: 'rgba(75, 192, 77, 0.2)',
                             borderColor: 'rgba(75, 192, 77, 1)',
                             borderWidth: 3,
@@ -972,7 +1059,7 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         setCMean(Number(e.target.value));
     }
     const handleCStDevChange = (e) => {
-        setCStDev(Number(e.target.value));
+        setCStDev(Number(e.target.value) / 100);
     }
     const handleCSkewChange = (e) => {
         setCSkew(Number(e.target.value));
@@ -996,7 +1083,7 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         setCMu(Number(e.target.value));
     }
     const handleCSigmaChange = (e) => {
-        setCSigma(Number(e.target.value));
+        setCSigma(Number(e.target.value) / 100);
     }
     const handleCDfChange = (e) => {
         setCDf(Number(e.target.value));
@@ -1031,7 +1118,7 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         if (distOption === 'custom') {
             dispatch({
                 type: 'CUSTOM',
-                payload: { "cMean": cMean, "cStDev": cStDev, "cSkew": cSkew, "cKurt": cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf }
+                payload: { "cMean": cMean, "cStDev": cStDev, "cSkew": cSkew, "cKurt": cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf, "cNormMLE": state.custom.cNormMLE, "cStudtMLE": state.custom.cStudtMLE }
             });
             dispatch({
                 type: 'TEXT',
@@ -1074,8 +1161,90 @@ print(sol)
             });
         } else if (distOption === 'normal') {
             console.log('normal')
+            console.log(cMu)
+            console.log(cSigma)
+            const addCustomNormalCDF = state.data.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "CustomNormalCDF": "N/A" };
+                } else {
+                    const customNormalCDF = `${((jStat.normal.cdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma, true)) * 100).toFixed(2)}%`
+                    return { ...item, "CustomNormalCDF": customNormalCDF };
+                }
+            });
+
+            const addCustomNormalPDF = addCustomNormalCDF.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "CustomNormalPDF": "N/A" };
+                } else {
+                    const customNormalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma)).toFixed(2)}`
+                    return { ...item, "CustomNormalPDF": customNormalPDF };
+                }
+            });
+
+            const addLogCustomNormalPDF = addCustomNormalPDF.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "LogCustomNormalPDF": "N/A" };
+                } else {
+                    const logCustomNormalPDF = `${(Math.log(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma))).toFixed(2)}`
+                    return { ...item, "LogCustomNormalPDF": logCustomNormalPDF };
+                }
+            });
+            let sum = 0;
+            for (let i = 0; i < addLogCustomNormalPDF.length; i++) {
+                if (addLogCustomNormalPDF[i].LogCustomNormalPDF != "N/A") {
+                    sum += Number(addLogCustomNormalPDF[i].LogCustomNormalPDF);
+                }
+            }
+            setCNormMLE(sum)
+            dispatch({
+                type: 'DATA',
+                payload: addLogCustomNormalPDF
+            });
         } else if (distOption === 'studentt') {
             console.log('studentt')
+            const addCustomStudentTCDF = state.data.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "CustomStudentTCDF": "N/A" };
+                } else {
+                    const customStudentTCDF = `${((jStat.studentt.cdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}%`
+                    return { ...item, "CustomStudentTCDF": customStudentTCDF };
+                }
+            });
+
+            const addCustomStudentTPDF = addCustomStudentTCDF.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "CustomStudentTPDF": "N/A" };
+                } else {
+                    const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}`
+                    return { ...item, "CustomStudentTPDF": customStudentTPDF };
+                }
+            });
+
+            const addLogCustomStudentTPDF = addCustomStudentTPDF.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "LogCustomStudentTPDF": "N/A" };
+                } else {
+                    const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100)).toFixed(2)}`
+                    return { ...item, "LogCustomStudentTPDF": LogCustomStudentTPDF };
+                }
+            });
+            let sum = 0;
+            for (let i = 0; i < addLogCustomStudentTPDF.length; i++) {
+                if (addLogCustomStudentTPDF[i].LogCustomStudentTPDF != "N/A") {
+                    sum += Number(addLogCustomStudentTPDF[i].LogCustomStudentTPDF);
+                }
+            }
+            setCStudtMLE(sum)
+            dispatch({
+                type: 'DATA',
+                payload: addLogCustomStudentTPDF
+            });
         } else if (distOption === 'johnsonsu') {
             const cMean = cKsi - cLambda * Math.exp((cDelta ** -2) / 2) * Math.sinh(cGamma / cDelta)
             const cStDev = Math.sqrt(cLambda ** 2 / 2 * (Math.exp(cDelta ** -2) - 1) * (Math.exp(cDelta ** -2) * Math.cosh(2 * cGamma / cDelta) + 1))
@@ -1138,6 +1307,7 @@ print(sol)
 
     return (
         <div>
+            <h1 style={{ margin: '0px', textAlign: 'center' }}>Parametric Value at Risk (PVaR)</h1>
             <div style={{ paddingLeft: '10px', }}>
                 <div style={{
                     width: '390px',
@@ -1274,9 +1444,9 @@ print(sol)
                                         </div>
                                         <div style={state.fix[0] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[0]} onChange={() => handleCheckbox(0)} /></div>
                                         <div style={state.fix[1] ? gridItem2 : gridItem}>StDev</div>
-                                        <div style={state.fix[1] ? gridItem2 : gridItem}>{`${(cStDev).toFixed(2)}%`}</div>
+                                        <div style={state.fix[1] ? gridItem2 : gridItem}>{`${(cStDev * 100).toFixed(2)}%`}</div>
                                         <div style={state.fix[1] ? gridItem2 : gridItem}>
-                                            <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 3} value={cStDev} step={0.1} onChange={(value) => handleCStDevChange(value)} disabled={state.fix[1]} />
+                                            <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 3} value={cStDev * 100} step={0.1} onChange={(value) => handleCStDevChange(value)} disabled={state.fix[1]} />
                                         </div>
                                         <div style={state.fix[1] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[1]} onChange={() => handleCheckbox(1)} /></div>
                                         <div style={state.fix[2] ? gridItem2 : gridItem}>Skew</div>
@@ -1300,30 +1470,44 @@ print(sol)
                                 )}
                                 {distOption === 'normal' && (
                                     <>
+                                        <div > .</div>
                                         <div />
-                                        <button onClick={reset}>Reset</button>
                                         <div />
                                         <div />
                                         <div style={gridItem}>Mu</div>
-                                        <div style={gridItem}>{(cMu).toFixed(4)}</div>
+                                        <div style={gridItem}>{(cMu).toFixed(2)}%</div>
                                         <div style={gridItem}>
                                             <input type="range" min={-2} max={2} value={cMu} step={0.1} onChange={(value) => handleCMuChange(value)} />
                                         </div>
                                         <div />
-                                        <div style={gridItem}>Sigma^2</div>
-                                        <div style={gridItem}>{(cSigma).toFixed(4)}</div>
+                                        <div style={gridItem}>Sigma</div>
+                                        <div style={gridItem}>{(cSigma * 100).toFixed(2)}%</div>
                                         <div style={gridItem}>
-                                            <input type="range" min={-0.05} max={0.05} value={cSigma} step={0.002} onChange={(value) => handleCSigmaChange(value)} />
+                                            <input type="range" min={0} max={5} value={cSigma * 100} step={0.1} onChange={(value) => handleCSigmaChange(value)} />
                                         </div>
                                         <div />
                                         <div style={gridItem}>MLE</div>
-                                        <div style={gridItem}>{(cMLE).toFixed(2)}</div>
+                                        <div style={gridItem}>{(cNormMLE).toFixed(2)}</div>
                                         <button onClick={customSolve}>Optimise/Solve</button>
                                         <div />
                                     </>
                                 )}
                                 {distOption === 'studentt' && (
                                     <>
+                                        <div > .</div>
+                                        <div />
+                                        <div />
+                                        <div />
+                                        <div style={gridItem}>DoF</div>
+                                        <div style={gridItem}>{(cDf).toFixed(2)}</div>
+                                        <div style={gridItem}>
+                                            <input type="range" min={2} max={8} value={cDf} step={0.1} onChange={(value) => handleCDfChange(value)} />
+                                        </div>
+                                        <div />
+                                        <div style={gridItem}>MLE</div>
+                                        <div style={gridItem}>{(cStudtMLE).toFixed(2)}</div>
+                                        <button onClick={customSolve}>Optimise/Solve</button>
+                                        <div />
                                     </>
                                 )}
                                 {distOption === 'johnsonsu' && (
@@ -1560,7 +1744,7 @@ print(sol)
                                         {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUPDF}</td>}
                                         {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>}
                                         {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomPDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.LogCustomPDF}</td>}
+                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{distOption === 'custom' ? item.LogCustomPDF : distOption === 'johnsonsu' ? item.LogCustomPDF : distOption === 'normal' ? item.LogCustomNormalPDF : item.LogCustomStudentTPDF}</td>}
                                     </tr>
                                 ))}
                             </tbody>

@@ -11,6 +11,7 @@ const Price = () => {
         <div style={{
             padding: '0 20px',
         }}>
+            <h1 style={{ margin: '0px', textAlign: 'center' }}>Option Pricing</h1>
             <select value={selectedOption} onChange={handleSelectChange} style={{
                 backgroundColor: 'rgba(211, 232, 232, 1)',
             }}>

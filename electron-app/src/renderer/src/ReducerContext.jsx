@@ -14,7 +14,7 @@ const initialState = {
     percentile: 99,
     isHidden: [false, true, true, true, true],
     isHiddenP: false,
-    custom: { cMean: 0, cStDev: 1, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318, cMLE: 0, cMu: 0, cSigma: 1, cDf: 30 },
+    custom: { cMean: 0, cStDev: 0.01, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318, cMLE: 0, cMu: 0, cSigma: 0.01, cDf: 4.5, cNormMLE: 0, cStudtMLE: 0 },
     jsu: ``,
     resultjsu: ``,
     fix: [false, false, false, false]
