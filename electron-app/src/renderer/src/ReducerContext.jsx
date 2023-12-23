@@ -8,6 +8,7 @@ const initialState = {
     result: '',
     text2: ``,
     data: [],
+    ks: {},
     stats: {},
     ranges: {},
     numBins: 100,
@@ -43,6 +44,11 @@ const reducer = (state, action) => {
                 ...state,
                 data: action.payload
             };
+        case 'KS':
+            return {
+                ...state,
+                ks: action.payload
+            };
         case 'STATS':
             if (Object.keys(action.payload)[0] === 'mean') {
                 return {
@@ -51,16 +57,26 @@ const reducer = (state, action) => {
                 };
             } else if (Object.keys(action.payload)[0] === 'NileL') {
                 //destructing
-                const { NileL, EileL, TileL, NileU, EileU, TileU } = action.payload
+                const { NileL, EileL, TileL, NileU, EileU, TileU, CNileL, CNileU, CTileL, CTileU } = action.payload
                 return {
                     ...state,
                     stats: {
                         ...state.stats,
-                        NileL, EileL, TileL, NileU, EileU, TileU,
+                        NileL, EileL, TileL, NileU, EileU, TileU, CNileL, CNileU, CTileL, CTileU,
                         JileL: `Loading...`,
                         JileU: `Loading...`,
                         CileL: `Loading...`,
                         CileU: `Loading...`,
+                    }
+                };
+            } else if (Object.keys(action.payload)[0] === 'CNileL') {
+                //destructing
+                const { CNileL, CNileU, CTileL, CTileU } = action.payload
+                return {
+                    ...state,
+                    stats: {
+                        ...state.stats,
+                        CNileL, CNileU, CTileL, CTileU,
                     }
                 };
             } else if (Object.keys(action.payload)[0] === 'gamma') {

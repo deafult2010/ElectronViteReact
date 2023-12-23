@@ -1,6 +1,7 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import Papa from "papaparse";
 import jStat from "jstat";
+import kstest from '@stdlib/stats-kstest';
 import { ReducerContext } from '../ReducerContext';
 import Chart from 'chart.js/auto'
 import SPData from '../assets/SPData.json'
@@ -173,8 +174,6 @@ const PVaR = () => {
         const CNileU = `${Number(jStat.normal.inv(percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
         const CTileU = `${Number(jStat.studentt.inv(percentile / 100, cDf)).toFixed(2)}%`
 
-
-
         const [bins2, minReturn, maxReturn, binWidth] = ComputeBins(returns)
 
         const addBins = addEmpiricalCDF.map((item, index) => {
@@ -253,7 +252,8 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "StudentTPDF": "N/A" };
             } else {
-                const studentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((df - 2) / df)), df)) * 100).toFixed(2)}`
+                const studentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev), df)) * 100 / (100 * sStDev)).toFixed(2)}`
+                // const studentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((df - 2) / df)), df)) * 100).toFixed(2)}`
                 return { ...item, "StudentTPDF": studentTPDF };
             }
         });
@@ -293,7 +293,7 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "CustomNormalCDF": "N/A" };
             } else {
-                const customNormalCDF = `${((jStat.normal.cdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma, true)) * 100).toFixed(2)}%`
+                const customNormalCDF = `${((jStat.normal.cdf(parseFloat(item.RankedReturn) / 100, cMu / 100, cSigma, true)) * 100).toFixed(2)}%`
                 return { ...item, "CustomNormalCDF": customNormalCDF };
             }
         });
@@ -303,7 +303,7 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "CustomNormalPDF": "N/A" };
             } else {
-                const customNormalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma)).toFixed(2)}`
+                const customNormalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu / 100, cSigma)).toFixed(2)}`
                 return { ...item, "CustomNormalPDF": customNormalPDF };
             }
         });
@@ -313,7 +313,7 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "LogCustomNormalPDF": "N/A" };
             } else {
-                const logCustomNormalPDF = `${(Math.log(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma))).toFixed(2)}`
+                const logCustomNormalPDF = `${(Math.log(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu / 100, cSigma))).toFixed(2)}`
                 return { ...item, "LogCustomNormalPDF": logCustomNormalPDF };
             }
         });
@@ -333,7 +333,8 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "CustomStudentTPDF": "N/A" };
             } else {
-                const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}`
+                const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev), cDf)) * 100 / (100 * sStDev)).toFixed(2)}`
+                // const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}`
                 return { ...item, "CustomStudentTPDF": customStudentTPDF };
             }
         });
@@ -343,7 +344,8 @@ print(r)
                 // First entry, no return calculation possible
                 return { ...item, "LogCustomStudentTPDF": "N/A" };
             } else {
-                const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100)).toFixed(2)}`
+                const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev), cDf)) * 100 / (100 * sStDev))).toFixed(2)}`
+                // const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100)).toFixed(2)}`
                 return { ...item, "LogCustomStudentTPDF": LogCustomStudentTPDF };
             }
         });
@@ -354,7 +356,6 @@ print(r)
                 sum1 += Number(addLogCustomPDF[i].LogCustomPDF);
             }
         }
-        console.log(sum1)
         setCMLE(sum1)
         let sum2 = 0;
         for (let i = 0; i < addLogCustomNormalPDF.length; i++) {
@@ -362,7 +363,6 @@ print(r)
                 sum2 += Number(addLogCustomNormalPDF[i].LogCustomNormalPDF);
             }
         }
-        console.log(sum2)
         setCNormMLE(sum2)
         let sum3 = 0;
         for (let i = 0; i < addLogCustomStudentTPDF.length; i++) {
@@ -370,10 +370,7 @@ print(r)
                 sum3 += Number(addLogCustomStudentTPDF[i].LogCustomStudentTPDF);
             }
         }
-        console.log(sum3)
         setCStudtMLE(sum3)
-
-        console.log(addLogCustomStudentTPDF)
 
         dispatch({
             type: 'CUSTOM',
@@ -398,11 +395,15 @@ print(r)
                 'TileL': TileL,
                 'JileL': JileL,
                 'CileL': CileL,
+                'CNileL': CNileL,
+                'CTileL': CTileL,
                 'NileU': NileU,
                 'EileU': EileU,
                 'TileU': TileU,
                 'JileU': JileU,
                 'CileU': CileU,
+                'CNileU': CNileU,
+                'CTileU': CTileU,
             }
         });
     }
@@ -433,6 +434,7 @@ print(r)
     const customData = (data) => {
         // destructure
         const { cMean, cStDev, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda } = data
+        console.log(data)
         setCMean(cMean * 100)
         setCStDev(cStDev * 100)
         setCSkew(cSkew)
@@ -500,6 +502,60 @@ print(r)
             payload: addLogCustomPDF
         });
     }
+
+    useEffect(() => {
+        const addCDFDiffs = state.data.map((item, index) => {
+            if (index === 0) {
+                // First entry, no return calculation possible
+                return { ...item, "NDiff": "N/A", "TDiff": "N/A", "JDiff": "N/A", "CDiff": "N/A", "CNDiff": "N/A", "CTDiff": "N/A" };
+            } else {
+                const NDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.NormalCDF.replace('%', '')) / 100);
+                const TDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.StudentTCDF.replace('%', '')) / 100)
+                const JDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.JohnsonSUCDF.replace('%', '')) / 100)
+                const CDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomCDF.replace('%', '')) / 100)
+                const CNDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomNormalCDF.replace('%', '')) / 100)
+                const CTDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomStudentTCDF.replace('%', '')) / 100)
+                return { ...item, "NDiff": NDiff, "TDiff": TDiff, "JDiff": JDiff, "CDiff": CDiff, "CNDiff": CNDiff, "CTDiff": CTDiff };
+            }
+        });
+
+        const NR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.NDiff));
+        const TR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.TDiff));
+        const JR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.JDiff));
+        const CR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CDiff));
+        const CNR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CNDiff));
+        const CTR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CTDiff));
+        const NKS = NR * Math.sqrt(addCDFDiffs.length - 1)
+        const TKS = TR * Math.sqrt(addCDFDiffs.length - 1)
+        const JKS = JR * Math.sqrt(addCDFDiffs.length - 1)
+        const CKS = CR * Math.sqrt(addCDFDiffs.length - 1)
+        const CNKS = CNR * Math.sqrt(addCDFDiffs.length - 1)
+        const CTKS = CTR * Math.sqrt(addCDFDiffs.length - 1)
+        const NPV = Math.exp(-(NR ** 2) * (addCDFDiffs.length - 1) * 2)
+        const TPV = Math.exp(-(TR ** 2) * (addCDFDiffs.length - 1) * 2)
+        const JPV = Math.exp(-(JR ** 2) * (addCDFDiffs.length - 1) * 2)
+        const CPV = Math.exp(-(CR ** 2) * (addCDFDiffs.length - 1) * 2)
+        const CNPV = Math.exp(-(CNR ** 2) * (addCDFDiffs.length - 1) * 2)
+        const CTPV = Math.exp(-(CTR ** 2) * (addCDFDiffs.length - 1) * 2)
+
+        dispatch({
+            type: 'KS',
+            payload: {
+                'nks': NKS.toFixed(2),
+                'tks': TKS.toFixed(2),
+                'jks': JKS.toFixed(2),
+                'cks': CKS.toFixed(2),
+                'cnks': CNKS.toFixed(2),
+                'ctks': CTKS.toFixed(2),
+                'npv': (NPV * 100).toFixed(2),
+                'tpv': (TPV * 100).toFixed(2),
+                'jpv': (JPV * 100).toFixed(2),
+                'cpv': (CPV * 100).toFixed(2),
+                'cnpv': (CNPV * 100).toFixed(2),
+                'ctpv': (CTPV * 100).toFixed(2),
+            }
+        });
+    }, [state.data])
 
     useEffect(() => {
         if (state.result.startsWith('{"JileL":')) {
@@ -712,6 +768,8 @@ print(r)
                 const johnsonSUPDF = state.data.map((item) => item.JohnsonSUPDF.replace('%', ''));
                 const studentTPDF = state.data.map((item) => item.StudentTPDF.replace('%', ''));
                 const customPDF = state.data.map((item) => item.CustomPDF.replace('%', ''));
+                const customNormalCDF = state.data.map((item) => item.CustomNormalCDF.replace('%', ''));
+                const customStudentTCDF = state.data.map((item) => item.CustomStudentTCDF.replace('%', ''));
                 const customNormalPDF = state.data.map((item) => item.CustomNormalPDF.replace('%', ''));
                 const customStudentTPDF = state.data.map((item) => item.CustomStudentTPDF.replace('%', ''));
 
@@ -752,7 +810,7 @@ print(r)
                         },
                         {
                             label: 'Custom',
-                            data: customCDF,
+                            data: distOption === 'custom' ? customCDF : distOption === 'johnsonsu' ? customCDF : distOption === 'normal' ? customNormalCDF : customStudentTCDF,
                             backgroundColor: 'rgba(75, 192, 77, 0.2)',
                             borderColor: 'rgba(75, 192, 77, 1)',
                             borderWidth: 3,
@@ -802,7 +860,7 @@ print(r)
                         {
                             type: 'line',
                             label: 'Custom',
-                            data: distOption === 'custom' ? customPDF : distOption === 'normal' ? customNormalPDF : customStudentTPDF,
+                            data: distOption === 'custom' ? customPDF : distOption === 'johnsonsu' ? customPDF : distOption === 'normal' ? customNormalPDF : customStudentTPDF,
                             backgroundColor: 'rgba(75, 192, 77, 0.2)',
                             borderColor: 'rgba(75, 192, 77, 1)',
                             borderWidth: 3,
@@ -891,7 +949,7 @@ print(r)
                         {
                             type: 'scatter',
                             label: `C %ileL`,
-                            data: [{ x: Number(state.stats.CileL.replace('%', '')), y: 0 }, { x: Number(state.stats.CileL.replace('%', '')), y: 1 }],
+                            data: [{ x: distOption === 'custom' ? Number(state.stats.CileL.replace('%', '')) : distOption === 'johnsonsu' ? Number(state.stats.CileL.replace('%', '')) : distOption === 'normal' ? Number(state.stats.CNileL.replace('%', '')) : Number(state.stats.CTileL.replace('%', '')), y: 0 }, { x: distOption === 'custom' ? Number(state.stats.CileL.replace('%', '')) : distOption === 'johnsonsu' ? Number(state.stats.CileL.replace('%', '')) : distOption === 'normal' ? Number(state.stats.CNileL.replace('%', '')) : Number(state.stats.CTileL.replace('%', '')), y: 1 }],
                             yAxisID: 'yPct',
                             backgroundColor: 'rgba(75, 192, 77, 0.2)',
                             borderColor: 'rgba(75, 192, 77, 1)',
@@ -901,7 +959,7 @@ print(r)
                         {
                             type: 'scatter',
                             label: `C %ileU`,
-                            data: [{ x: Number(state.stats.CileU.replace('%', '')), y: 0 }, { x: Number(state.stats.CileU.replace('%', '')), y: 1 }],
+                            data: [{ x: distOption === 'custom' ? Number(state.stats.CileU.replace('%', '')) : distOption === 'johnsonsu' ? Number(state.stats.CileU.replace('%', '')) : distOption === 'normal' ? Number(state.stats.CNileU.replace('%', '')) : Number(state.stats.CTileU.replace('%', '')), y: 0 }, { x: distOption === 'custom' ? Number(state.stats.CileU.replace('%', '')) : distOption === 'johnsonsu' ? Number(state.stats.CileU.replace('%', '')) : distOption === 'normal' ? Number(state.stats.CNileU.replace('%', '')) : Number(state.stats.CTileU.replace('%', '')), y: 1 }],
                             yAxisID: 'yPct',
                             backgroundColor: 'rgba(75, 192, 77, 0.2)',
                             borderColor: 'rgba(75, 192, 77, 1)',
@@ -944,7 +1002,7 @@ print(r)
                 };
             }
         }
-    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX, state.isHidden, state.isHiddenP, state.stats]);
+    }, [state.data, state.numBins, state.ranges.minX, state.ranges.maxX, state.isHidden, state.isHiddenP, state.stats, distOption]);
 
     const handleNumBinsChange = (e) => {
         setNumBins(Number(e.target.value));
@@ -967,6 +1025,10 @@ print(r)
         const NileU = `${Number(jStat.normal.inv(percentile / 100, state.stats.mean, state.stats.sStDev * 100)).toFixed(2)}%`
         const TileU = `${Number(jStat.studentt.inv(percentile / 100, state.stats.df)).toFixed(2)}%`
         const EileU = `${Number(jStat.percentile(returns, percentile / 100)).toFixed(2)}%`
+        const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, state.custom.cMu, state.custom.cSigma * 100)).toFixed(2)}%`
+        const CNileU = `${Number(jStat.normal.inv(percentile / 100, state.custom.cMu, state.custom.cSigma * 100)).toFixed(2)}%`
+        const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, state.custom.cDf)).toFixed(2)}%`
+        const CTileU = `${Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)).toFixed(2)}%`
 
         dispatch({
             type: 'TEXT',
@@ -993,6 +1055,10 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
                 'NileU': NileU,
                 'EileU': EileU,
                 'TileU': TileU,
+                'CNileL': CNileL,
+                'CNileU': CNileU,
+                'CTileL': CTileL,
+                'CTileU': CTileU,
             }
         });
     }
@@ -1059,7 +1125,7 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         setCMean(Number(e.target.value));
     }
     const handleCStDevChange = (e) => {
-        setCStDev(Number(e.target.value) / 100);
+        setCStDev(Number(e.target.value));
     }
     const handleCSkewChange = (e) => {
         setCSkew(Number(e.target.value));
@@ -1161,14 +1227,12 @@ print(sol)
             });
         } else if (distOption === 'normal') {
             console.log('normal')
-            console.log(cMu)
-            console.log(cSigma)
             const addCustomNormalCDF = state.data.map((item, index) => {
                 if (index === 0) {
                     // First entry, no return calculation possible
                     return { ...item, "CustomNormalCDF": "N/A" };
                 } else {
-                    const customNormalCDF = `${((jStat.normal.cdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma, true)) * 100).toFixed(2)}%`
+                    const customNormalCDF = `${((jStat.normal.cdf(parseFloat(item.RankedReturn) / 100, cMu / 100, cSigma, true)) * 100).toFixed(2)}%`
                     return { ...item, "CustomNormalCDF": customNormalCDF };
                 }
             });
@@ -1178,7 +1242,7 @@ print(sol)
                     // First entry, no return calculation possible
                     return { ...item, "CustomNormalPDF": "N/A" };
                 } else {
-                    const customNormalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma)).toFixed(2)}`
+                    const customNormalPDF = `${(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu / 100, cSigma)).toFixed(2)}`
                     return { ...item, "CustomNormalPDF": customNormalPDF };
                 }
             });
@@ -1188,7 +1252,7 @@ print(sol)
                     // First entry, no return calculation possible
                     return { ...item, "LogCustomNormalPDF": "N/A" };
                 } else {
-                    const logCustomNormalPDF = `${(Math.log(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu, cSigma))).toFixed(2)}`
+                    const logCustomNormalPDF = `${(Math.log(jStat.normal.pdf(parseFloat(item.RankedReturn) / 100, cMu / 100, cSigma))).toFixed(2)}`
                     return { ...item, "LogCustomNormalPDF": logCustomNormalPDF };
                 }
             });
@@ -1203,6 +1267,20 @@ print(sol)
                 type: 'DATA',
                 payload: addLogCustomNormalPDF
             });
+
+            const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+            const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, cDf)).toFixed(2)}%`
+            const CNileU = `${Number(jStat.normal.inv(percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+            const CTileU = `${Number(jStat.studentt.inv(percentile / 100, cDf)).toFixed(2)}%`
+            dispatch({
+                type: 'STATS',
+                payload: {
+                    'CNileL': CNileL,
+                    'CTileL': CTileL,
+                    'CNileU': CNileU,
+                    'CTileU': CTileU,
+                }
+            });
         } else if (distOption === 'studentt') {
             console.log('studentt')
             const addCustomStudentTCDF = state.data.map((item, index) => {
@@ -1210,7 +1288,7 @@ print(sol)
                     // First entry, no return calculation possible
                     return { ...item, "CustomStudentTCDF": "N/A" };
                 } else {
-                    const customStudentTCDF = `${((jStat.studentt.cdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}%`
+                    const customStudentTCDF = `${((jStat.studentt.cdf(((parseFloat(item.RankedReturn) / 100) - state.stats.mean) / (state.stats.sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}%`
                     return { ...item, "CustomStudentTCDF": customStudentTCDF };
                 }
             });
@@ -1220,7 +1298,8 @@ print(sol)
                     // First entry, no return calculation possible
                     return { ...item, "CustomStudentTPDF": "N/A" };
                 } else {
-                    const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100).toFixed(2)}`
+                    const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - state.stats.mean) / (state.stats.sStDev), cDf)) * 100 / (100 * state.stats.sStDev)).toFixed(2)}`
+                    // const customStudentTPDF = `${((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - state.stats.mean) / (state.stats.sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100 / (100 * state.stats.sStDev)).toFixed(2)}`
                     return { ...item, "CustomStudentTPDF": customStudentTPDF };
                 }
             });
@@ -1230,7 +1309,7 @@ print(sol)
                     // First entry, no return calculation possible
                     return { ...item, "LogCustomStudentTPDF": "N/A" };
                 } else {
-                    const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - mean) / (sStDev * Math.sqrt((cDf - 2) / cDf)), cDf)) * 100)).toFixed(2)}`
+                    const LogCustomStudentTPDF = `${(Math.log((jStat.studentt.pdf(((parseFloat(item.RankedReturn) / 100) - state.stats.mean) / (state.stats.sStDev), cDf)) * 100 / (100 * state.stats.sStDev))).toFixed(2)}`
                     return { ...item, "LogCustomStudentTPDF": LogCustomStudentTPDF };
                 }
             });
@@ -1244,6 +1323,20 @@ print(sol)
             dispatch({
                 type: 'DATA',
                 payload: addLogCustomStudentTPDF
+            });
+
+            const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+            const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, cDf)).toFixed(2)}%`
+            const CNileU = `${Number(jStat.normal.inv(percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+            const CTileU = `${Number(jStat.studentt.inv(percentile / 100, cDf)).toFixed(2)}%`
+            dispatch({
+                type: 'STATS',
+                payload: {
+                    'CNileL': CNileL,
+                    'CTileL': CTileL,
+                    'CNileU': CNileU,
+                    'CTileU': CTileU,
+                }
             });
         } else if (distOption === 'johnsonsu') {
             const cMean = cKsi - cLambda * Math.exp((cDelta ** -2) / 2) * Math.sinh(cGamma / cDelta)
@@ -1268,7 +1361,7 @@ print(sol)
         if (x === 0) {
             setCMean(state.custom.cMean)
         } else if (x === 1) {
-            setCStDev(state.custom.cStDev)
+            setCStDev(state.custom.cStDev * 100)
         } else if (x === 2) {
             setCSkew(state.custom.cSkew)
         } else if (x === 3) {
@@ -1325,8 +1418,9 @@ print(sol)
                         }}>
                             <option value="local">Local</option>
                             <option value="csv">CSV</option>
+                            <option value="sqlapi">SQL API</option>
+                            <option value="sqllocal">SQL Local</option>
                             <option value="tableau">Tableau</option>
-                            <option value="sql">SQL</option>
                         </select>
                     </div>
                 </div>
@@ -1364,7 +1458,7 @@ print(sol)
                                 marginLeft: '10px'
                             }}>
                                 <div style={gridItem}>Mean</div>
-                                <div style={gridItem}>{`${(state.stats.mean).toFixed(2)}%`}</div>
+                                <div style={gridItem}>{`${(state.stats.mean * 100).toFixed(2)}%`}</div>
                                 <div style={gridItem}>StDev</div>
                                 <div style={gridItem}>{`${(state.stats.sStDev * 100).toFixed(2)}%`}</div>
                                 <div style={gridItem}>Skew</div>
@@ -1444,9 +1538,9 @@ print(sol)
                                         </div>
                                         <div style={state.fix[0] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[0]} onChange={() => handleCheckbox(0)} /></div>
                                         <div style={state.fix[1] ? gridItem2 : gridItem}>StDev</div>
-                                        <div style={state.fix[1] ? gridItem2 : gridItem}>{`${(cStDev * 100).toFixed(2)}%`}</div>
+                                        <div style={state.fix[1] ? gridItem2 : gridItem}>{`${(cStDev).toFixed(2)}%`}</div>
                                         <div style={state.fix[1] ? gridItem2 : gridItem}>
-                                            <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 3} value={cStDev * 100} step={0.1} onChange={(value) => handleCStDevChange(value)} disabled={state.fix[1]} />
+                                            <input type="range" min={state.stats.sStDev * 100 * 0.1} max={state.stats.sStDev * 100 * 3} value={cStDev} step={0.1} onChange={(value) => handleCStDevChange(value)} disabled={state.fix[1]} />
                                         </div>
                                         <div style={state.fix[1] ? gridItem2 : gridItem}><input type="checkbox" checked={state.fix[1]} onChange={() => handleCheckbox(1)} /></div>
                                         <div style={state.fix[2] ? gridItem2 : gridItem}>Skew</div>
@@ -1498,6 +1592,14 @@ print(sol)
                                         <div />
                                         <div />
                                         <div />
+                                        <div style={gridItem2}>Mu</div>
+                                        <div style={gridItem2}>{(state.stats.mean * 100).toFixed(2)}%</div>
+                                        <div />
+                                        <div />
+                                        <div style={gridItem2}>Gamma</div>
+                                        <div style={gridItem2}>{(state.stats.sStDev * 100).toFixed(2)}%</div>
+                                        <div />
+                                        <div />
                                         <div style={gridItem}>DoF</div>
                                         <div style={gridItem}>{(cDf).toFixed(2)}</div>
                                         <div style={gridItem}>
@@ -1505,7 +1607,8 @@ print(sol)
                                         </div>
                                         <div />
                                         <div style={gridItem}>MLE</div>
-                                        <div style={gridItem}>{(cStudtMLE).toFixed(2)}</div>
+                                        {/* <div style={gridItem}>{(cStudtMLE).toFixed(2)}</div> */}
+                                        <div style={gridItem}>N/A <b className="tooltip">&#9432; <span className="tooltiptext">Unlike the other distributions, no analytical expressions are available for the maximum log-likelihood estimates of ν (shape (DoF)) , µ (location), γ (scale)</span></b></div>
                                         <button onClick={customSolve}>Optimise/Solve</button>
                                         <div />
                                     </>
@@ -1593,36 +1696,44 @@ print(sol)
                                 <div style={gridItem}>{state.stats.NileL}</div>
                                 <div style={gridItem}>{state.stats.TileL}</div>
                                 <div style={gridItem}>{state.stats.JileL}</div>
-                                <div style={gridItem}>{state.stats.CileL}</div>
+                                <div style={gridItem}>{distOption === 'custom' ? state.stats.CileL : distOption === 'johnsonsu' ? state.stats.CileL : distOption === 'normal' ? state.stats.CNileL : state.stats.CTileL}</div>
                                 <div style={gridItem}>Upper %ile</div>
                                 <div style={gridItem}>{state.stats.EileU}</div>
                                 <div style={gridItem}>{state.stats.NileU}</div>
                                 <div style={gridItem}>{state.stats.TileU}</div>
                                 <div style={gridItem}>{state.stats.JileU}</div>
-                                <div style={gridItem}>{state.stats.CileU}</div>
+                                <div style={gridItem}>{distOption === 'custom' ? state.stats.CileU : distOption === 'johnsonsu' ? state.stats.CileU : distOption === 'normal' ? state.stats.CNileU : state.stats.CTileU}</div>
                             </div>
                         </div>
                     </div>
                     <div>
                         <h1>CDFs</h1>
-                        <h2>K-S Tests</h2>
+                        <h2>K-S Tests <b className="tooltip">&#9432; <span className="tooltiptext">Kolmogorov–Smirnov (K-S) test: How likely is it that we would see a collection of samples like this if they were drawn from that probability distribution? A P-value of less than 5% indicates there is significant evidence to reject the null hypothesis that the samples could have been drawn from that probability distribution</span></b></h2>
                         <div style={{
-                            width: '400px',
+                            width: '480px',
                             backgroundColor: 'rgba(255, 255, 255, 0.8)',
                             display: 'grid',
-                            gridTemplateColumns: '80px 80px 80px 80px 80px',
+                            gridTemplateColumns: '80px 80px 80px 80px 80px 80px',
                             padding: '10px'
                         }}>
+                            <div style={gridItem}>Dist.</div>
                             <div style={gridItem}>Empirical</div>
                             <div style={gridItem}>Normal</div>
                             <div style={gridItem}>Student T</div>
                             <div style={gridItem}>Johnson SU</div>
                             <div style={gridItem}>Custom</div>
-                            <div style={gridItem}>1</div>
-                            <div style={gridItem}>2</div>
-                            <div style={gridItem}>3</div>
-                            <div style={gridItem}>4</div>
-                            <div style={gridItem}>5</div>
+                            <div style={gridItem}>KS Stat*&#8730;n</div>
+                            <div style={gridItem}>N/A</div>
+                            <div style={gridItem}>{state.ks.nks ? state.ks.nks : 'Loading...'}</div>
+                            <div style={gridItem}>{state.ks.tks ? state.ks.tks : 'Loading...'}</div>
+                            <div style={gridItem}>{state.ks.jks ? state.ks.jks : 'Loading...'}</div>
+                            <div style={gridItem}>{!state.ks.cks ? 'Loading...' : distOption === 'custom' ? state.ks.cks : distOption === 'johnsonsu' ? state.ks.cks : distOption === 'normal' ? state.ks.cnks : state.ks.ctks}</div>
+                            <div style={gridItem}>P-value</div>
+                            <div style={gridItem}>N/A</div>
+                            <div style={gridItem}>{state.ks.npv ? state.ks.npv + '%' : 'Loading...'}</div>
+                            <div style={gridItem}>{state.ks.tpv ? state.ks.tpv + '%' : 'Loading...'}</div>
+                            <div style={gridItem}>{state.ks.jpv ? state.ks.jpv + '%' : 'Loading...'}</div>
+                            <div style={gridItem}>{!state.ks.cpv ? 'Loading...' : distOption === 'custom' ? state.ks.cpv + '%' : distOption === 'johnsonsu' ? state.ks.cpv + '%' : distOption === 'normal' ? state.ks.cnpv + '%' : state.ks.ctpv + '%'}</div>
                         </div>
                     </div>
                     <div style={{ width: '45vw', height: '50vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>

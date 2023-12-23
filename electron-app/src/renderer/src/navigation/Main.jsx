@@ -7,6 +7,7 @@ import Pric from '../components/Pric';
 import PVaR from '../components/PVaR';
 import Excel from '../components/Excel';
 import BasicEmbed from '../components/BasicEmbed';
+import DataAnalyzer from '../components/DataAnalyzer';
 
 function Main() {
     return (
@@ -16,7 +17,8 @@ function Main() {
                 <Route path="/xterm" element={<XTerm />} />
                 <Route path="/pric" element={<Pric />} />
                 <Route path="/pvar" element={<PVaR />} />
-                <Route path="/tableau" element={<BasicEmbed />} />
+                <Route path="/dat" element={<DataAnalyzer />} />
+                <Route path="/tab" element={<BasicEmbed />} />
                 <Route path="/upload" element={<Excel />} />
             </Routes>
         </section>

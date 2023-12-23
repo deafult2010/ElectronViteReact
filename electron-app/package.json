@@ -19,6 +19,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
+    "@stdlib/stats-kstest": "^0.1.0",
     "chart.js": "^4.4.0",
     "electron-updater": "^6.1.1",
     "jstat": "^1.9.6",
