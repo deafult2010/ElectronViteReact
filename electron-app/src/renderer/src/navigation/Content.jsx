@@ -40,9 +40,6 @@ function Header() {
                         <li>
                             <Link to="/tab">Tab</Link>
                         </li>
-                        <li>
-                            <Link to="/dat">Dat</Link>
-                        </li>
                     </ul>
                 </nav>
 

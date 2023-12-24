@@ -1,7 +1,6 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import Papa from "papaparse";
 import jStat from "jstat";
-import kstest from '@stdlib/stats-kstest';
 import { ReducerContext } from '../ReducerContext';
 import Chart from 'chart.js/auto'
 import SPData from '../assets/SPData.json'
@@ -29,6 +28,8 @@ const PVaR = () => {
     const [cStudtMLE, setCStudtMLE] = useState(state.custom.cStudtMLE);
     const chartPDF = useRef(null);
     const chartCDF = useRef(null);
+    const chartACF = useRef(null);
+    const chartARCH = useRef(null);
     // save to csv
     const [dataFile, setdataFile] = useState('local');
     const [distOption, setDistOption] = useState('custom');
@@ -372,6 +373,49 @@ print(r)
         }
         setCStudtMLE(sum3)
 
+        const addResids = addLogCustomStudentTPDF.map((item, index) => {
+            const Resid = Number(addLogCustomStudentTPDF[index].Return1D.replace('%', '')) / 100 - mean
+            console.log(Number(addLogCustomStudentTPDF[index].Return1D.replace('%', '')) / 100 - mean)
+            return { ...item, "Resid": Resid, "Resid2": Resid ** 2 };
+        });
+
+        const resids = addResids.slice(1).map(item => item.Resid);
+        const residsMean = jStat.mean(resids);
+        const resids2 = addResids.slice(1).map(item => item.Resid2);
+        const resids2Mean = jStat.mean(resids2);
+
+
+        const Lags = addResids.map((item, index) => {
+            const rl0 = (addResids[index].Resid - residsMean) * (addResids[index - 0].Resid - residsMean)
+            const rl1 = index <= 1 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 1].Resid - residsMean)
+            const rl2 = index <= 2 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 2].Resid - residsMean)
+            const rl3 = index <= 3 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 3].Resid - residsMean)
+            const rl4 = index <= 4 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 4].Resid - residsMean)
+            const rl5 = index <= 5 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 5].Resid - residsMean)
+            const rl6 = index <= 6 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 6].Resid - residsMean)
+            const rl7 = index <= 7 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 7].Resid - residsMean)
+            const rl8 = index <= 8 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 8].Resid - residsMean)
+            const rl9 = index <= 9 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 9].Resid - residsMean)
+            const rl10 = index <= 10 ? 0 : (addResids[index].Resid - residsMean) * (addResids[index - 10].Resid - residsMean)
+            const r2l0 = (addResids[index].Resid2 - resids2Mean) * (addResids[index - 0].Resid2 - resids2Mean)
+            const r2l1 = index <= 1 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 1].Resid2 - resids2Mean)
+            const r2l2 = index <= 2 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 2].Resid2 - resids2Mean)
+            const r2l3 = index <= 3 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 3].Resid2 - resids2Mean)
+            const r2l4 = index <= 4 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 4].Resid2 - resids2Mean)
+            const r2l5 = index <= 5 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 5].Resid2 - resids2Mean)
+            const r2l6 = index <= 6 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 6].Resid2 - resids2Mean)
+            const r2l7 = index <= 7 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 7].Resid2 - resids2Mean)
+            const r2l8 = index <= 8 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 8].Resid2 - resids2Mean)
+            const r2l9 = index <= 9 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 9].Resid2 - resids2Mean)
+            const r2l10 = index <= 10 ? 0 : (addResids[index].Resid2 - resids2Mean) * (addResids[index - 10].Resid2 - resids2Mean)
+            return { ...item, "rl0": rl0, "rl1": rl1, "rl2": rl2, "rl3": rl3, "rl4": rl4, "rl5": rl5, "rl6": rl6, "rl7": rl7, "rl8": rl8, "rl9": rl9, "rl10": rl10, "r2l0": r2l0, "r2l1": r2l1, "r2l2": r2l2, "r2l3": r2l3, "r2l4": r2l4, "r2l5": r2l5, "r2l6": r2l6, "r2l7": r2l7, "r2l8": r2l8, "r2l9": r2l9, "r2l10": r2l10 };
+        });
+
+        const rl0devSq = jStat.variance(Lags.slice(1).map(item => item.Resid), true) * (Lags.slice(1).length - 1);
+        const rl0sum = jStat.sum(Lags.slice(1).map(item => item.rl0))
+
+        console.log(Lags)
+
         dispatch({
             type: 'CUSTOM',
             payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": sum1, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": state.custom.cDf, "cNormMLE": sum2, "cStudtMLE": sum3 }
@@ -504,57 +548,59 @@ print(r)
     }
 
     useEffect(() => {
-        const addCDFDiffs = state.data.map((item, index) => {
-            if (index === 0) {
-                // First entry, no return calculation possible
-                return { ...item, "NDiff": "N/A", "TDiff": "N/A", "JDiff": "N/A", "CDiff": "N/A", "CNDiff": "N/A", "CTDiff": "N/A" };
-            } else {
-                const NDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.NormalCDF.replace('%', '')) / 100);
-                const TDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.StudentTCDF.replace('%', '')) / 100)
-                const JDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.JohnsonSUCDF.replace('%', '')) / 100)
-                const CDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomCDF.replace('%', '')) / 100)
-                const CNDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomNormalCDF.replace('%', '')) / 100)
-                const CTDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomStudentTCDF.replace('%', '')) / 100)
-                return { ...item, "NDiff": NDiff, "TDiff": TDiff, "JDiff": JDiff, "CDiff": CDiff, "CNDiff": CNDiff, "CTDiff": CTDiff };
-            }
-        });
+        if (state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF'))) {
+            const addCDFDiffs = state.data.map((item, index) => {
+                if (index === 0) {
+                    // First entry, no return calculation possible
+                    return { ...item, "NDiff": "N/A", "TDiff": "N/A", "JDiff": "N/A", "CDiff": "N/A", "CNDiff": "N/A", "CTDiff": "N/A" };
+                } else {
+                    const NDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.NormalCDF.replace('%', '')) / 100);
+                    const TDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.StudentTCDF.replace('%', '')) / 100)
+                    const JDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.JohnsonSUCDF.replace('%', '')) / 100)
+                    const CDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomCDF.replace('%', '')) / 100)
+                    const CNDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomNormalCDF.replace('%', '')) / 100)
+                    const CTDiff = Math.abs(Number(item.EmpiricalCDF.replace('%', '')) / 100 - Number(item.CustomStudentTCDF.replace('%', '')) / 100)
+                    return { ...item, "NDiff": NDiff, "TDiff": TDiff, "JDiff": JDiff, "CDiff": CDiff, "CNDiff": CNDiff, "CTDiff": CTDiff };
+                }
+            });
 
-        const NR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.NDiff));
-        const TR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.TDiff));
-        const JR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.JDiff));
-        const CR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CDiff));
-        const CNR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CNDiff));
-        const CTR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CTDiff));
-        const NKS = NR * Math.sqrt(addCDFDiffs.length - 1)
-        const TKS = TR * Math.sqrt(addCDFDiffs.length - 1)
-        const JKS = JR * Math.sqrt(addCDFDiffs.length - 1)
-        const CKS = CR * Math.sqrt(addCDFDiffs.length - 1)
-        const CNKS = CNR * Math.sqrt(addCDFDiffs.length - 1)
-        const CTKS = CTR * Math.sqrt(addCDFDiffs.length - 1)
-        const NPV = Math.exp(-(NR ** 2) * (addCDFDiffs.length - 1) * 2)
-        const TPV = Math.exp(-(TR ** 2) * (addCDFDiffs.length - 1) * 2)
-        const JPV = Math.exp(-(JR ** 2) * (addCDFDiffs.length - 1) * 2)
-        const CPV = Math.exp(-(CR ** 2) * (addCDFDiffs.length - 1) * 2)
-        const CNPV = Math.exp(-(CNR ** 2) * (addCDFDiffs.length - 1) * 2)
-        const CTPV = Math.exp(-(CTR ** 2) * (addCDFDiffs.length - 1) * 2)
+            const NR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.NDiff));
+            const TR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.TDiff));
+            const JR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.JDiff));
+            const CR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CDiff));
+            const CNR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CNDiff));
+            const CTR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CTDiff));
+            const NKS = NR * Math.sqrt(addCDFDiffs.length - 1)
+            const TKS = TR * Math.sqrt(addCDFDiffs.length - 1)
+            const JKS = JR * Math.sqrt(addCDFDiffs.length - 1)
+            const CKS = CR * Math.sqrt(addCDFDiffs.length - 1)
+            const CNKS = CNR * Math.sqrt(addCDFDiffs.length - 1)
+            const CTKS = CTR * Math.sqrt(addCDFDiffs.length - 1)
+            const NPV = Math.exp(-(NR ** 2) * (addCDFDiffs.length - 1) * 2)
+            const TPV = Math.exp(-(TR ** 2) * (addCDFDiffs.length - 1) * 2)
+            const JPV = Math.exp(-(JR ** 2) * (addCDFDiffs.length - 1) * 2)
+            const CPV = Math.exp(-(CR ** 2) * (addCDFDiffs.length - 1) * 2)
+            const CNPV = Math.exp(-(CNR ** 2) * (addCDFDiffs.length - 1) * 2)
+            const CTPV = Math.exp(-(CTR ** 2) * (addCDFDiffs.length - 1) * 2)
 
-        dispatch({
-            type: 'KS',
-            payload: {
-                'nks': NKS.toFixed(2),
-                'tks': TKS.toFixed(2),
-                'jks': JKS.toFixed(2),
-                'cks': CKS.toFixed(2),
-                'cnks': CNKS.toFixed(2),
-                'ctks': CTKS.toFixed(2),
-                'npv': (NPV * 100).toFixed(2),
-                'tpv': (TPV * 100).toFixed(2),
-                'jpv': (JPV * 100).toFixed(2),
-                'cpv': (CPV * 100).toFixed(2),
-                'cnpv': (CNPV * 100).toFixed(2),
-                'ctpv': (CTPV * 100).toFixed(2),
-            }
-        });
+            dispatch({
+                type: 'KS',
+                payload: {
+                    'nks': NKS.toFixed(2),
+                    'tks': TKS.toFixed(2),
+                    'jks': JKS.toFixed(2),
+                    'cks': CKS.toFixed(2),
+                    'cnks': CNKS.toFixed(2),
+                    'ctks': CTKS.toFixed(2),
+                    'npv': (NPV * 100).toFixed(2),
+                    'tpv': (TPV * 100).toFixed(2),
+                    'jpv': (JPV * 100).toFixed(2),
+                    'cpv': (CPV * 100).toFixed(2),
+                    'cnpv': (CNPV * 100).toFixed(2),
+                    'ctpv': (CTPV * 100).toFixed(2),
+                }
+            });
+        }
     }, [state.data])
 
     useEffect(() => {
@@ -685,6 +731,66 @@ print(r)
         if (state.data) {
             if (state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF'))) {
                 const chartOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        numbers: { duration: 1 },
+                        colors: {
+                            type: "color",
+                            duration: 1,
+                            from: "transparent",
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 0
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: "linear",
+                            ticks: {
+                                beginAtZero: true,
+                                callback: (value) =>
+                                    value > 0 ? `+${value}%` : `${value}%`,
+                            },
+                            // clip off data
+                            min: state.ranges.minX,
+                            max: state.ranges.maxX,
+                            //prevent offset between bar charts on x-axis
+                            stacked: true,
+                        },
+                        y: {
+                            type: 'linear',
+                            ticks: {
+                                beginAtZero: true,
+                                callback: (value) => `${value}%`,
+                            },
+                            stacked: false,
+                        },
+                        //Add secondary axes for %iles
+                        yPct: {
+                            type: 'linear',
+                            display: false,
+                            ticks: {
+                                maxTicksLimit: 10,
+                                suggestedMax: 100,
+                                beginAtZero: true,
+                                callback: (value) => `${value}%`,
+                            },
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            onClick: handleClick,
+                            // Hide legends for %ile lines
+                            labels: {
+                                filter: item => item.text !== 'E %ileL' && item.text !== 'N %ileL' && item.text !== 'T %ileL' && item.text !== 'J %ileL' && item.text !== 'C %ileL' && item.text !== 'E %ileU' && item.text !== 'N %ileU' && item.text !== 'T %ileU' && item.text !== 'J %ileU' && item.text !== 'C %ileU'
+                            }
+                        }
+                    },
+                };
+                const chartOptions2 = {
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: {
@@ -969,6 +1075,36 @@ print(r)
                     ] : [],
                 };
 
+                const chartACFData = {
+                    labels: rankedReturns,
+                    datasets: state.stats.EileL ? [
+                        {
+                            type: 'bar',
+                            label: 'Empirical',
+                            data: empiricalPDF,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 3,
+                            hidden: state.isHidden[0]
+                        },
+                    ] : [],
+                };
+
+                const chartARCHData = {
+                    labels: rankedReturns,
+                    datasets: state.stats.EileL ? [
+                        {
+                            type: 'bar',
+                            label: 'Empirical',
+                            data: empiricalPDF,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 3,
+                            hidden: state.isHidden[0]
+                        },
+                    ] : [],
+                };
+
                 const myChart = new Chart(chartPDF.current, {
                     type: 'scatter',
                     data: chartPDFData,
@@ -979,6 +1115,18 @@ print(r)
                     type: 'line',
                     data: chartCDFData,
                     options: chartOptions,
+                });
+
+                const myChart3 = new Chart(chartACF.current, {
+                    type: 'scatter',
+                    data: chartACFData,
+                    options: chartOptions2,
+                });
+
+                const myChart4 = new Chart(chartARCH.current, {
+                    type: 'scatter',
+                    data: chartARCHData,
+                    options: chartOptions2,
                 });
 
                 if (state.ranges.minX === -9999) {
@@ -999,6 +1147,8 @@ print(r)
                 return () => {
                     myChart.destroy();
                     myChart2.destroy();
+                    myChart3.destroy();
+                    myChart4.destroy();
                 };
             }
         }
@@ -1751,8 +1901,8 @@ print(sol)
                         <h1 style={{ margin: '5px 0px', }}>ARCH Resid^2 <b className="tooltip">&#9432; <span className="tooltiptext">AutoRegressive Conditional Heteroskedasticity (ARCH) Test: Check if the variance of the residuals (error terms) are constant. If not then the standard error of the sample estimators might be high which can lead to failing to reject the null hypothesis when it is false (type 2 error). Thus using PVaR is not appropriate (See FHS tab for alternative)</span></b></h1>
                         <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
                     </div>
-                    <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartPDF}></canvas> : `Loading...`}</div>
-                    <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{0 === 1 ? <canvas ref={chartCDF}></canvas> : `Loading...`}</div>
+                    <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartACF}></canvas> : `Loading...`}</div>
+                    <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartARCH}></canvas> : `Loading...`}</div>
                 </div>
             )}
 
