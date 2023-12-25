@@ -4,6 +4,7 @@ import jStat from "jstat";
 import { ReducerContext } from '../ReducerContext';
 import Chart from 'chart.js/auto'
 import SPData from '../assets/SPData.json'
+import { multipleLinearRegression } from './MultLinReg.js';
 
 const PVaR = () => {
     const [csvFile, setCSVFile] = useState(null);
@@ -411,10 +412,47 @@ print(r)
             return { ...item, "rl0": rl0, "rl1": rl1, "rl2": rl2, "rl3": rl3, "rl4": rl4, "rl5": rl5, "rl6": rl6, "rl7": rl7, "rl8": rl8, "rl9": rl9, "rl10": rl10, "r2l0": r2l0, "r2l1": r2l1, "r2l2": r2l2, "r2l3": r2l3, "r2l4": r2l4, "r2l5": r2l5, "r2l6": r2l6, "r2l7": r2l7, "r2l8": r2l8, "r2l9": r2l9, "r2l10": r2l10 };
         });
 
-        const rl0devSq = jStat.variance(Lags.slice(1).map(item => item.Resid), true) * (Lags.slice(1).length - 1);
-        const rl0sum = jStat.sum(Lags.slice(1).map(item => item.rl0))
+        const rdevSq = jStat.variance(Lags.slice(1).map(item => item.Resid), true) * (Lags.slice(1).length - 1);
+        const r_0 = jStat.sum(Lags.slice(1).map(item => item.rl0)) / rdevSq
+        const r_1 = jStat.sum(Lags.slice(1).map(item => item.rl1)) / rdevSq
+        const r_2 = jStat.sum(Lags.slice(1).map(item => item.rl2)) / rdevSq
+        const r_3 = jStat.sum(Lags.slice(1).map(item => item.rl3)) / rdevSq
+        const r_4 = jStat.sum(Lags.slice(1).map(item => item.rl4)) / rdevSq
+        const r_5 = jStat.sum(Lags.slice(1).map(item => item.rl5)) / rdevSq
+        const r_6 = jStat.sum(Lags.slice(1).map(item => item.rl6)) / rdevSq
+        const r_7 = jStat.sum(Lags.slice(1).map(item => item.rl7)) / rdevSq
+        const r_8 = jStat.sum(Lags.slice(1).map(item => item.rl8)) / rdevSq
+        const r_9 = jStat.sum(Lags.slice(1).map(item => item.rl9)) / rdevSq
+        const r_10 = jStat.sum(Lags.slice(1).map(item => item.rl10)) / rdevSq
+        const r2devSq = jStat.variance(Lags.slice(1).map(item => item.Resid2), true) * (Lags.slice(1).length - 1);
+        const r2_0 = jStat.sum(Lags.slice(1).map(item => item.r2l0)) / r2devSq
+        const r2_1 = jStat.sum(Lags.slice(1).map(item => item.r2l1)) / r2devSq
+        const r2_2 = jStat.sum(Lags.slice(1).map(item => item.r2l2)) / r2devSq
+        const r2_3 = jStat.sum(Lags.slice(1).map(item => item.r2l3)) / r2devSq
+        const r2_4 = jStat.sum(Lags.slice(1).map(item => item.r2l4)) / r2devSq
+        const r2_5 = jStat.sum(Lags.slice(1).map(item => item.r2l5)) / r2devSq
+        const r2_6 = jStat.sum(Lags.slice(1).map(item => item.r2l6)) / r2devSq
+        const r2_7 = jStat.sum(Lags.slice(1).map(item => item.r2l7)) / r2devSq
+        const r2_8 = jStat.sum(Lags.slice(1).map(item => item.r2l8)) / r2devSq
+        const r2_9 = jStat.sum(Lags.slice(1).map(item => item.r2l9)) / r2devSq
+        const r2_10 = jStat.sum(Lags.slice(1).map(item => item.r2l10)) / r2devSq
 
-        console.log(Lags)
+        const mlrRArray = addResids.slice(1).map((item, index) => [1, index <= 1 ? 0 : addResids[index - 1].Resid, index <= 2 ? 0 : addResids[index - 2].Resid, index <= 3 ? 0 : addResids[index - 3].Resid, index <= 4 ? 0 : addResids[index - 4].Resid, index <= 5 ? 0 : addResids[index - 5].Resid,])
+        const rArray = addResids.slice(1).map((item) => [item.Resid])
+        const rCoeffs = multipleLinearRegression(mlrRArray, rArray)
+        const acfQStat = jStat.sumsqrd(rCoeffs) * addResids.slice(1).length
+        const acfPVal = 1 - jStat.chisquare.cdf(acfQStat, 5)
+
+        const mlrR2Array = addResids.slice(1).map((item, index) => [1, index <= 1 ? 0 : addResids[index - 1].Resid2, index <= 2 ? 0 : addResids[index - 2].Resid2, index <= 3 ? 0 : addResids[index - 3].Resid2, index <= 4 ? 0 : addResids[index - 4].Resid2, index <= 5 ? 0 : addResids[index - 5].Resid2,])
+        const r2Array = addResids.slice(1).map((item) => [item.Resid2])
+        const r2Coeffs = multipleLinearRegression(mlrR2Array, r2Array)
+        const archQStat = jStat.sumsqrd(r2Coeffs) * addResids.slice(1).length
+        const archPVal = 1 - jStat.chisquare.cdf(archQStat, 5)
+
+        dispatch({
+            type: 'ACF',
+            payload: { r_0, r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9, r_10, r2_0, r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7, r2_8, r2_9, r2_10, acfQStat, acfPVal, archQStat, archPVal }
+        });
 
         dispatch({
             type: 'CUSTOM',
@@ -812,11 +850,10 @@ print(r)
                             ticks: {
                                 beginAtZero: true,
                                 callback: (value) =>
-                                    value > 0 ? `+${value}%` : `${value}%`,
+                                    `${value}`
                             },
-                            // clip off data
-                            min: state.ranges.minX,
-                            max: state.ranges.maxX,
+                            min: 0,
+                            max: 10,
                             //prevent offset between bar charts on x-axis
                             stacked: true,
                         },
@@ -824,29 +861,14 @@ print(r)
                             type: 'linear',
                             ticks: {
                                 beginAtZero: true,
-                                callback: (value) => `${value}%`,
+                                callback: (value) => `${value * 100}%`,
                             },
                             stacked: false,
                         },
-                        //Add secondary axes for %iles
-                        yPct: {
-                            type: 'linear',
-                            display: false,
-                            ticks: {
-                                maxTicksLimit: 10,
-                                suggestedMax: 100,
-                                beginAtZero: true,
-                                callback: (value) => `${value}%`,
-                            },
-                        }
                     },
                     plugins: {
                         legend: {
-                            onClick: handleClick,
-                            // Hide legends for %ile lines
-                            labels: {
-                                filter: item => item.text !== 'E %ileL' && item.text !== 'N %ileL' && item.text !== 'T %ileL' && item.text !== 'J %ileL' && item.text !== 'C %ileL' && item.text !== 'E %ileU' && item.text !== 'N %ileU' && item.text !== 'T %ileU' && item.text !== 'J %ileU' && item.text !== 'C %ileU'
-                            }
+                            display: false
                         }
                     },
                 };
@@ -878,6 +900,40 @@ print(r)
                 const customStudentTCDF = state.data.map((item) => item.CustomStudentTCDF.replace('%', ''));
                 const customNormalPDF = state.data.map((item) => item.CustomNormalPDF.replace('%', ''));
                 const customStudentTPDF = state.data.map((item) => item.CustomStudentTPDF.replace('%', ''));
+                const ACF = [
+                    { x: 0, y: state.acf.r_0 },
+                    { x: 1, y: state.acf.r_1 },
+                    { x: 2, y: state.acf.r_2 },
+                    { x: 3, y: state.acf.r_3 },
+                    { x: 4, y: state.acf.r_4 },
+                    { x: 5, y: state.acf.r_5 },
+                    { x: 6, y: state.acf.r_6 },
+                    { x: 7, y: state.acf.r_7 },
+                    { x: 8, y: state.acf.r_8 },
+                    { x: 9, y: state.acf.r_9 },
+                    { x: 10, y: state.acf.r_10 },
+                ];
+                const CI_U = [
+                    { x: -1, y: 2 / Math.sqrt(state.data.length - 1) },
+                    { x: 11, y: 2 / Math.sqrt(state.data.length - 1) },
+                ];
+                const CI_L = [
+                    { x: -1, y: -2 / Math.sqrt(state.data.length - 1) },
+                    { x: 11, y: -2 / Math.sqrt(state.data.length - 1) },
+                ];
+                const ARCH = [
+                    { x: 0, y: state.acf.r2_0 },
+                    { x: 1, y: state.acf.r2_1 },
+                    { x: 2, y: state.acf.r2_2 },
+                    { x: 3, y: state.acf.r2_3 },
+                    { x: 4, y: state.acf.r2_4 },
+                    { x: 5, y: state.acf.r2_5 },
+                    { x: 6, y: state.acf.r2_6 },
+                    { x: 7, y: state.acf.r2_7 },
+                    { x: 8, y: state.acf.r2_8 },
+                    { x: 9, y: state.acf.r2_9 },
+                    { x: 10, y: state.acf.r2_10 },
+                ];
 
                 const chartCDFData = {
                     labels: rankedReturns,
@@ -1076,31 +1132,54 @@ print(r)
                 };
 
                 const chartACFData = {
-                    labels: rankedReturns,
                     datasets: state.stats.EileL ? [
                         {
                             type: 'bar',
-                            label: 'Empirical',
-                            data: empiricalPDF,
+                            label: 'ACF',
+                            data: ACF,
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 3,
-                            hidden: state.isHidden[0]
+                        },
+                        {
+                            type: 'line',
+                            label: 'CI_U',
+                            data: CI_U,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 3,
+                            borderDash: [10, 5]
+                        },
+                        {
+                            type: 'line',
+                            label: 'CI_L',
+                            data: CI_L,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 3,
+                            borderDash: [10, 5]
                         },
                     ] : [],
                 };
 
                 const chartARCHData = {
-                    labels: rankedReturns,
                     datasets: state.stats.EileL ? [
                         {
                             type: 'bar',
-                            label: 'Empirical',
-                            data: empiricalPDF,
+                            label: 'ACF',
+                            data: ARCH,
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 3,
-                            hidden: state.isHidden[0]
+                        },
+                        {
+                            type: 'line',
+                            label: 'CI_U',
+                            data: CI_U,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 3,
+                            borderDash: [10, 5]
                         },
                     ] : [],
                 };
@@ -1895,11 +1974,11 @@ print(sol)
                     <div></div>
                     <div>
                         <h1 style={{ margin: '5px 0px', }}>ACF Resids <b className="tooltip">&#9432; <span className="tooltiptext">AutoCorrelation Tests: Check if past observations influence your current observations. If so, this violates the Gauss-Markov theorem and therefore your sample estimators are inherently biased. Thus using PVaR is not appropriate (See FHS tab for alternative)</span></b></h1>
-                        <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
+                        <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: {state.acf.acfQStat.toFixed(2)} p-value: {(state.acf.acfPVal * 100).toFixed(2)}%</p>
                     </div>
                     <div>
                         <h1 style={{ margin: '5px 0px', }}>ARCH Resid^2 <b className="tooltip">&#9432; <span className="tooltiptext">AutoRegressive Conditional Heteroskedasticity (ARCH) Test: Check if the variance of the residuals (error terms) are constant. If not then the standard error of the sample estimators might be high which can lead to failing to reject the null hypothesis when it is false (type 2 error). Thus using PVaR is not appropriate (See FHS tab for alternative)</span></b></h1>
-                        <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: 123 p-value: 456</p>
+                        <p style={{ margin: '0px', }}><b>Box-Pierce:</b> Q stat: {state.acf.archQStat.toFixed(2)} p-value: {(state.acf.archPVal * 100).toFixed(2)}%</p>
                     </div>
                     <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartACF}></canvas> : `Loading...`}</div>
                     <div style={{ width: '45vw', height: '30vh', fontSize: '40px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{state.data.some(obj => obj.hasOwnProperty('JohnsonSUPDF')) ? <canvas ref={chartARCH}></canvas> : `Loading...`}</div>

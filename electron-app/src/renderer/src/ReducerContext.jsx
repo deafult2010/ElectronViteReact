@@ -9,6 +9,7 @@ const initialState = {
     text2: ``,
     data: [],
     ks: {},
+    acf: {},
     stats: {},
     ranges: {},
     numBins: 100,
@@ -48,6 +49,11 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 ks: action.payload
+            };
+        case 'ACF':
+            return {
+                ...state,
+                acf: action.payload
             };
         case 'STATS':
             if (Object.keys(action.payload)[0] === 'mean') {
