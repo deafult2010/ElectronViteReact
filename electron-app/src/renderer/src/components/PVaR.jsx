@@ -36,6 +36,17 @@ const PVaR = () => {
     const [distOption, setDistOption] = useState('custom');
     const [uploadOption, setUploadOption] = useState('csv');
     const [inputOption, setInputOption] = useState('local');
+    const [tabData, setTabData] = useState(state.tabData);
+    const today = new Date();
+    const [date, setDate] = useState(`${today.getDate().toString().padStart(2, "0")}-${today.toLocaleString('default', { month: 'short' })}-${today.getFullYear().toString().slice(-2)}`)
+    const [riskFactor, setRiskFactor] = useState('SP500')
+    const [tenor, setTenor] = useState(0)
+    const [quoteType, setQuoteType] = useState('Price')
+    const [returnPeriod, setReturnPeriod] = useState(1)
+    const [varModel, setVarModel] = useState('Parametric')
+    const [lookback, setLookback] = useState(1000)
+    const [valAtRisk, setValAtRisk] = useState(0)
+    const [fatTailMult, setFatTailMult] = useState(0)
 
     const handleDistChange = (e) => {
         setDistOption(e.target.value);
@@ -54,6 +65,25 @@ const PVaR = () => {
 
     const runBatFile = async () => {
         window.api.runBat();
+    };
+
+    const handleDateChange = (e) => {
+        setDate(e.target.value);
+    };
+    const handleRiskFactorChange = (e) => {
+        setRiskFactor(e.target.value);
+    };
+    const handleTenorChange = (e) => {
+        setTenor(e.target.value);
+    };
+    const handleQuoteTypeChange = (e) => {
+        setQuoteType(e.target.value);
+    };
+    const handleReturnPeriodChange = (e) => {
+        setReturnPeriod(e.target.value);
+    };
+    const handleVarModelChange = (e) => {
+        setVarModel(e.target.value);
     };
 
     const ComputeBins = (returns) => {
@@ -376,7 +406,6 @@ print(r)
 
         const addResids = addLogCustomStudentTPDF.map((item, index) => {
             const Resid = Number(addLogCustomStudentTPDF[index].Return1D.replace('%', '')) / 100 - mean
-            console.log(Number(addLogCustomStudentTPDF[index].Return1D.replace('%', '')) / 100 - mean)
             return { ...item, "Resid": Resid, "Resid2": Resid ** 2 };
         });
 
@@ -513,10 +542,17 @@ print(r)
         computeStats(SPData)
     }
 
+    const loadTableau = () => {
+        if (tabData.length > 1) {
+            computeStats(tabData)
+        } else {
+            computeStats(SPData)
+        }
+    }
+
     const customData = (data) => {
         // destructure
         const { cMean, cStDev, cSkew, cKurt, cGamma, cDelta, cKsi, cLambda } = data
-        console.log(data)
         setCMean(cMean * 100)
         setCStDev(cStDev * 100)
         setCSkew(cSkew)
@@ -1397,16 +1433,16 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
         if (distOption === 'custom') {
             customData(data)
         } else if (distOption === 'normal') {
-            console.log('normal')
+            // console.log('normal')
         } else if (distOption === 'studentt') {
-            console.log('studentt')
+            // console.log('studentt')
         } else if (distOption === 'johnsonsu') {
             customData(data)
         }
     }
 
     const undo = () => {
-        console.log('undo')
+        // console.log('undo')
     }
 
     const customSolve = () => {
@@ -1455,7 +1491,6 @@ print(sol)
             `
             });
         } else if (distOption === 'normal') {
-            console.log('normal')
             const addCustomNormalCDF = state.data.map((item, index) => {
                 if (index === 0) {
                     // First entry, no return calculation possible
@@ -1496,11 +1531,15 @@ print(sol)
                 type: 'DATA',
                 payload: addLogCustomNormalPDF
             });
+            dispatch({
+                type: 'CUSTOM',
+                payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE, "cMu": cMu, "cSigma": cSigma, "cDf": state.custom.cDf, "cNormMLE": sum, "cStudtMLE": state.custom.cStudtMLE }
+            });
 
             const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
-            const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, cDf)).toFixed(2)}%`
+            const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, state.custom.cDf)).toFixed(2)}%`
             const CNileU = `${Number(jStat.normal.inv(percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
-            const CTileU = `${Number(jStat.studentt.inv(percentile / 100, cDf)).toFixed(2)}%`
+            const CTileU = `${Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)).toFixed(2)}%`
             dispatch({
                 type: 'STATS',
                 payload: {
@@ -1511,7 +1550,6 @@ print(sol)
                 }
             });
         } else if (distOption === 'studentt') {
-            console.log('studentt')
             const addCustomStudentTCDF = state.data.map((item, index) => {
                 if (index === 0) {
                     // First entry, no return calculation possible
@@ -1553,10 +1591,13 @@ print(sol)
                 type: 'DATA',
                 payload: addLogCustomStudentTPDF
             });
-
-            const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+            dispatch({
+                type: 'CUSTOM',
+                payload: { "cMean": state.custom.cMean, "cStDev": state.custom.cStDev, "cSkew": state.custom.cSkew, "cKurt": state.custom.cKurt, "cGamma": state.custom.cGamma, "cDelta": state.custom.cDelta, "cKsi": state.custom.cKsi, "cLambda": state.custom.cLambda, "cMLE": state.custom.cMLE, "cMu": state.custom.cMu, "cSigma": state.custom.cSigma, "cDf": cDf, "cNormMLE": state.custom.cNormMLE, "cStudtMLE": sum }
+            });
+            const CNileL = `${Number(jStat.normal.inv(1 - percentile / 100, state.custom.cMu, state.custom.cSigma * 100)).toFixed(2)}%`
             const CTileL = `${Number(jStat.studentt.inv(1 - percentile / 100, cDf)).toFixed(2)}%`
-            const CNileU = `${Number(jStat.normal.inv(percentile / 100, cMu, cSigma * 100)).toFixed(2)}%`
+            const CNileU = `${Number(jStat.normal.inv(percentile / 100, state.custom.cMu, state.custom.cSigma * 100)).toFixed(2)}%`
             const CTileU = `${Number(jStat.studentt.inv(percentile / 100, cDf)).toFixed(2)}%`
             dispatch({
                 type: 'STATS',
@@ -1634,7 +1675,7 @@ print(sol)
                 <div style={{
                     width: '390px',
                     display: 'grid',
-                    gridTemplateColumns: '60px 150px',
+                    gridTemplateColumns: '60px 150px 500px',
                 }}>
                     <h1 style={{ margin: '5px', }}>Data</h1>
                     <div style={{
@@ -1652,21 +1693,45 @@ print(sol)
                             <option value="tableau">Tableau</option>
                         </select>
                     </div>
-                </div>
-
-                <div style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    display: 'grid',
-                    gridTemplateColumns: 'auto auto',
-                    paddingLeft: '10px'
-                }}>
-                    <div>
-                        <input type="file" onChange={handleFileChange} />
-                        <button onClick={convertCSVtoJSON}>Convert</button>
-                    </div>
-                    <div>
-                        <button onClick={loadJSON}>Local Data</button>
-                    </div>
+                    {
+                        inputOption === 'local' ?
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto',
+                                paddingLeft: '10px',
+                                paddingTop: '10px'
+                            }}>
+                                <div>
+                                    <button onClick={loadJSON}>Load Data</button>
+                                </div>
+                            </div>
+                            : inputOption === 'csv' ?
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'auto',
+                                    paddingLeft: '10px',
+                                    paddingTop: '10px'
+                                }}>
+                                    <div>
+                                        <input type="file" onChange={handleFileChange} />
+                                        <button onClick={convertCSVtoJSON}>Load Data</button>
+                                    </div>
+                                </div>
+                                : inputOption === 'sqlapi' ? null
+                                    : inputOption === 'sqllocal' ? null
+                                        : inputOption === 'tableau' ?
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'auto',
+                                                paddingLeft: '10px',
+                                                paddingTop: '10px'
+                                            }}>
+                                                <div>
+                                                    <button onClick={loadTableau}>Load Data</button>
+                                                </div>
+                                            </div>
+                                            : null
+                    }
                 </div>
             </div>
             {state.stats.mean && (
@@ -1993,7 +2058,7 @@ print(sol)
                         <div style={{
                             width: '390px',
                             display: 'grid',
-                            gridTemplateColumns: '250px 150px',
+                            gridTemplateColumns: '250px 150px 150px',
                         }}>
                             <h1 style={{ margin: '5px', }}>View Custom Output</h1>
                             <div style={{
@@ -2009,6 +2074,12 @@ print(sol)
                                     <option value="sql">SQL</option>
                                 </select>
                             </div>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto',
+                                paddingLeft: '10px',
+                                paddingTop: '10px',
+                            }}><div><button onClick={runBatFile}>Upload Data</button></div></div>
                         </div>
                         <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: 'auto' }}>
                             <thead>
@@ -2019,76 +2090,96 @@ print(sol)
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>Quote Type</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>Return Period</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>VaR Model</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Sample Size</th>
+                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Look-back</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>VaR</th>
                                     <th style={{ border: '1px solid black', padding: '0px 8px' }}>FTM <b className="tooltip">&#9432; <span className="tooltiptext">Fat Tail Multiplier (FTM): take the custom percentile and divide it by the custom standard deviation (assumes the mean is 0)</span></b></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr style={rowStyles}>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>01-Nov-23</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>SP500</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>0</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>Price</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>1</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>Parametric</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>1000</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>5.4</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={date} onChange={(value) => handleDateChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={riskFactor} onChange={(value) => handleRiskFactorChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={tenor} onChange={(value) => handleTenorChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={quoteType} onChange={(value) => handleQuoteTypeChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={returnPeriod} onChange={(value) => handleReturnPeriodChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={varModel} onChange={(value) => handleVarModelChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={lookback} onChange={(value) => handleLookbackChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{distOption === 'custom' ? state.stats.CileL : distOption === 'johnsonsu' ? state.stats.CileL : distOption === 'normal' ? state.stats.CNileL : state.stats.CTileL}</td>
                                     {/* replace next line code with custom FTM */}
-                                    <td style={{ border: '1px solid black', padding: '0px 16px', color: 'black' }}>{(Number(jStat.studentt.inv(1 - percentile / 100, state.stats.df)) * Math.sqrt((state.stats.df - 2) / state.stats.df)).toFixed(2)}</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 19px', color: 'black' }}>{(Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>
-                        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }}><button onClick={runBatFile}>Upload Data</button></div>
                     </div>
                     <div>
                         <h1>View Input Data</h1>
-                        <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
-                                    <th style={{ border: '1px solid black', padding: '0px 29px' }}>Date</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Price</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Return</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Rank</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Returns Ranked</th>
-                                    <th style={{ border: '1px solid black', padding: '0px 8px' }}>Empirical CDF</th>
-                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Normal CDF</th>}
-                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Student T CDF</th>}
-                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Johnson SU CDF</th>}
-                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Custom CDF</th>}
-                                    {state.isHidden[1] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Normal PDF</th>}
-                                    {state.isHidden[2] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Student T PDF</th>}
-                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Johnson SU PDF</th>}
-                                    {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>LogJohnson SU PDF</th>}
-                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Custom PDF</th>}
-                                    {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>LogCustom PDF</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {state.data.map((item, index) => (
-                                    <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
-                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Date}</td>
-                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Price}</td>
-                                        {1 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Return1D}</td>}
-                                        {1 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank1D}</td>}
-                                        {0 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Return2D}</td>}
-                                        {0 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank2D}</td>}
-                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.RankedReturn}</td>
-                                        <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.EmpiricalCDF}</td>
-                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalCDF}</td>}
-                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTCDF}</td>}
-                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUCDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomCDF}</td>}
-                                        {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalPDF}</td>}
-                                        {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTPDF}</td>}
-                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUPDF}</td>}
-                                        {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomPDF}</td>}
-                                        {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{distOption === 'custom' ? item.LogCustomPDF : distOption === 'johnsonsu' ? item.LogCustomPDF : distOption === 'normal' ? item.LogCustomNormalPDF : item.LogCustomStudentTPDF}</td>}
+                        <div style={{
+                            // width: '480px',
+                            // backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            display: 'grid',
+                            gridTemplateColumns: '300px 50px auto',
+                            padding: '10px'
+                        }}>
+                            <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                                        <th style={{ border: '1px solid black', padding: '0px 29px' }}>Date</th>
+                                        <th style={{ border: '1px solid black', padding: '0px 8px' }}>Price</th>
+                                        <th style={{ border: '1px solid black', padding: '0px 8px' }}>Return</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {state.data.map((item, index) => (
+                                        <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
+                                            <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.Date}</td>
+                                            <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.Price}</td>
+                                            {1 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.Return1D}</td>}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <div />
+                            <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                                        <th style={{ border: '1px solid black', padding: '0px 8px' }}>Rank</th>
+                                        <th style={{ border: '1px solid black', padding: '0px 8px' }}>Returns Ranked</th>
+                                        <th style={{ border: '1px solid black', padding: '0px 8px' }}>Empirical CDF</th>
+                                        {state.isHidden[1] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Normal CDF</th>}
+                                        {state.isHidden[2] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Student T CDF</th>}
+                                        {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Johnson SU CDF</th>}
+                                        {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Custom CDF</th>}
+                                        {state.isHidden[1] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Normal PDF</th>}
+                                        {state.isHidden[2] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Student T PDF</th>}
+                                        {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Johnson SU PDF</th>}
+                                        {state.isHidden[3] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>LogJohnson SU PDF</th>}
+                                        {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>Custom PDF</th>}
+                                        {state.isHidden[4] ? null : <th style={{ border: '1px solid black', padding: '0px 8px' }}>LogCustom PDF</th>}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {state.data.map((item, index) => (
+                                        <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
+                                            {1 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank1D}</td>}
+                                            {0 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Return2D}</td>}
+                                            {0 === 1 && <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.Rank2D}</td>}
+                                            <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.RankedReturn}</td>
+                                            <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.EmpiricalCDF}</td>
+                                            {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalCDF}</td>}
+                                            {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTCDF}</td>}
+                                            {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUCDF}</td>}
+                                            {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomCDF}</td>}
+                                            {state.isHidden[1] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.NormalPDF}</td>}
+                                            {state.isHidden[2] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.StudentTPDF}</td>}
+                                            {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.JohnsonSUPDF}</td>}
+                                            {state.isHidden[3] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.LogJohnsonSUPDF}</td>}
+                                            {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{item.CustomPDF}</td>}
+                                            {state.isHidden[4] ? null : <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{distOption === 'custom' ? item.LogCustomPDF : distOption === 'johnsonsu' ? item.LogCustomPDF : distOption === 'normal' ? item.LogCustomNormalPDF : item.LogCustomStudentTPDF}</td>}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )

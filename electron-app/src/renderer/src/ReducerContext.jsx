@@ -16,10 +16,21 @@ const initialState = {
     percentile: 99,
     isHidden: [false, true, true, true, true],
     isHiddenP: false,
-    custom: { cMean: 0, cStDev: 0.01, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318, cMLE: 0, cMu: 0, cSigma: 0.01, cDf: 4.5, cNormMLE: 0, cStudtMLE: 0 },
+    custom: { cMean: 0, cStDev: 1, cSkew: 0, cKurt: 3, cGamma: 0, cKsi: 0, cDelta: 5.521765, cLambda: 0.054318, cMLE: 0, cMu: 0, cSigma: 0.01, cDf: 4.5, cNormMLE: 0, cStudtMLE: 0 },
     jsu: ``,
     resultjsu: ``,
-    fix: [false, false, false, false]
+    fix: [false, false, false, false],
+    tabData: [],
+    param: '',
+    tabDataSer: [],
+    paramSer: '',
+    url: 'https://public.tableau.com/views/Returns_17038617360470/Dashboard?:language=en-US&:display_count=n&:origin=viz_share_link',
+    serverurl: 'https://eucltableau.intcx/iceu/abc/views/xyz',
+    urloption: '',
+    urlpub: '',
+    urlser: '',
+    user: '',
+    pass: ''
 };
 
 // Create the reducer function
@@ -156,6 +167,61 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 fix: action.payload
+            };
+        case 'TABDATA':
+            return {
+                ...state,
+                tabData: action.payload
+            };
+        case 'PARAM':
+            return {
+                ...state,
+                param: action.payload
+            };
+        case 'TABDATA_SER':
+            return {
+                ...state,
+                tabDataSer: action.payload
+            };
+        case 'PARAM_SER':
+            return {
+                ...state,
+                paramSer: action.payload
+            };
+        case 'URL':
+            return {
+                ...state,
+                url: action.payload
+            };
+        case 'SERVERURL':
+            return {
+                ...state,
+                serverurl: action.payload
+            };
+        case 'URLOPTION':
+            return {
+                ...state,
+                urloption: action.payload
+            };
+        case 'URLPUB':
+            return {
+                ...state,
+                urlpub: action.payload
+            };
+        case 'URLSER':
+            return {
+                ...state,
+                urlser: action.payload
+            };
+        case 'USER':
+            return {
+                ...state,
+                user: action.payload
+            };
+        case 'PASS':
+            return {
+                ...state,
+                pass: action.payload
             };
         default:
             return state;
