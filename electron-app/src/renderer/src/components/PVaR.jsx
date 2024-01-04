@@ -715,10 +715,9 @@ print(r)
             const CR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.CDiff : 0));
             const CNR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.CNDiff : 0));
             const CTR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.CTDiff : 0));
-            console.log(addCDFDiffs.length)
+            // I get more intuitive results sticking with total count of observations compared to just the count of observations in window
+            // const count = addCDFDiffs.filter((obj) => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX).length;
             const count2 = addCDFDiffs.length
-            const count = addCDFDiffs.filter((obj) => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX).length;
-            console.log(count)
             const NKS = NR * Math.sqrt(count2)
             const TKS = TR * Math.sqrt(count2)
             const JKS = JR * Math.sqrt(count2)
