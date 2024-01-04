@@ -35,7 +35,7 @@ function Header() {
                             <Link to="/liq">LIQ</Link>
                         </li>
                         <li>
-                            <Link to="/crs">CRS</Link>
+                            <Link to="/ccr">CCR</Link>
                         </li>
                         <li>
                             <Link to="/tab">Tab</Link>

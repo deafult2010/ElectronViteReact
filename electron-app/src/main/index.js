@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import child from 'child_process'
+import fs from 'fs-extra'
 
 function createWindow() {
   // Create the browser window.
@@ -91,8 +92,12 @@ ipcMain.handle("openExplorer", () => {
     console.log(data.toString())
   })
 });
-ipcMain.handle("runBat", () => {
-  const sourcePath = 'C:\\Users\\thoma\\OneDrive\\Desktop\\Projects\\BatTest\\test.xlsx';
+
+// code to copy a file
+ipcMain.handle("runBat", (e, fileName) => {
+  console.log('123')
+  console.log(fileName)
+  const sourcePath = `C:\\Users\\thoma\\Downloads\\${fileName}`;
   const destinationPath = 'C:\\Users\\thoma\\OneDrive\\Desktop\\Projects';
   child.execFile('cmd', ['/c', 'copy', sourcePath, destinationPath], (error, stdout, stderr) => {
     if (error) {
@@ -103,3 +108,24 @@ ipcMain.handle("runBat", () => {
     console.log('File copied successfully!');
   })
 });
+
+ipcMain.handle("saveFile", (event, path, buffer) => {
+  fs.outputFile(path, buffer, err => {
+    if (err) {
+      console.log(err.message)
+    } else {
+      console.log(`file saved here ${path}`)
+    }
+  })
+})
+
+ipcMain.handle("uploadFile", (event, path, buffer, host, remote, user, pass) => {
+  fs.outputFile(path, buffer, err => {
+    if (err) {
+      console.log(err.message)
+    } else {
+      console.log(`file saved here ${path}`)
+      // add ssh code here
+    }
+  })
+})

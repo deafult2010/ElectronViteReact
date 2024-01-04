@@ -37,6 +37,8 @@ const PVaR = () => {
     const [uploadOption, setUploadOption] = useState('csv');
     const [inputOption, setInputOption] = useState('local');
     const [tabData, setTabData] = useState(state.tabData);
+    const [tabDataSer, setTabDataSer] = useState(state.tabDataSer);
+    const [urlOption, setUrlOption] = useState(state.urloption);
     const today = new Date();
     const [date, setDate] = useState(`${today.getDate().toString().padStart(2, "0")}-${today.toLocaleString('default', { month: 'short' })}-${today.getFullYear().toString().slice(-2)}`)
     const [riskFactor, setRiskFactor] = useState('SP500')
@@ -47,9 +49,55 @@ const PVaR = () => {
     const [lookback, setLookback] = useState(1000)
     const [valAtRisk, setValAtRisk] = useState(0)
     const [fatTailMult, setFatTailMult] = useState(0)
+    const [localLoc, setLocalLoc] = useState(state.localLoc)
+    const [sshLoc, setSshLoc] = useState(state.sshLoc)
+    const [user, setUser] = useState(state.sshUser)
+    const [pass, setPass] = useState(state.sshPass)
+    const [host, setHost] = useState(state.host)
+
+    const handleUserChange = (e) => {
+        setUser(e.target.value);
+        dispatch({
+            type: 'SSHUSER',
+            payload: e.target.value
+        });
+    }
+    const handlePassChange = (e) => {
+        setPass(e.target.value);
+        dispatch({
+            type: 'SSHPASS',
+            payload: e.target.value
+        });
+    }
+
+    const handleSshLocChange = (e) => {
+        setSshLoc(e.target.value);
+        dispatch({
+            type: 'SSHPASS',
+            payload: e.target.value
+        });
+    }
+    const handleLocalLocChange = (e) => {
+        setLocalLoc(e.target.value);
+        dispatch({
+            type: 'SSHPASS',
+            payload: e.target.value
+        });
+    }
+
+    const handleHostChange = (e) => {
+        setHost(e.target.value);
+        dispatch({
+            type: 'HOST',
+            payload: e.target.value
+        });
+    }
 
     const handleDistChange = (e) => {
         setDistOption(e.target.value);
+        setValAtRisk(e.target.value === 'custom' ? state.stats.CileL : e.target.value === 'johnsonsu' ? state.stats.CileL : e.target.value === 'normal' ? state.stats.CNileL : state.stats.CTileL)
+        // Uses StudT FTM regardless of selection
+        setFatTailMult(e.target.value === 'custom' ? (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2) : e.target.value === 'johnsonsu' ? (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2) : e.target.value === 'normal' ? (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2) : (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2))
     };
     const handleUploadChange = (e) => {
         setUploadOption(e.target.value);
@@ -63,8 +111,18 @@ const PVaR = () => {
         setCSVFile(file);
     };
 
-    const runBatFile = async () => {
-        window.api.runBat();
+    const handleDownload = () => {
+        const data = [{ BUSINESS_DATE: date, RISK_FACTOR: riskFactor, YEARS_TO_MATURITY: tenor, QUOTE_TYPE: quoteType, RETURN_PERIOD: returnPeriod, VAR_MODEL: varModel, OBSERVATIONS: lookback, VAR: valAtRisk }]
+        const fileName = `Haircuts_${Date.now()}.csv`
+        console.log(data)
+        const csv = Papa.unparse(data);
+        console.log(csv)
+        const csvData = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        if (uploadOption === 'csv') {
+            window.api.saveBlob(csvData, localLoc + fileName);
+        } else if (uploadOption === 'tableau') {
+            window.api.uploadBlob(csvData, localLoc + fileName, host, sshLoc, user, pass);
+        }
     };
 
     const handleDateChange = (e) => {
@@ -543,10 +601,19 @@ print(r)
     }
 
     const loadTableau = () => {
-        if (tabData.length > 1) {
-            computeStats(tabData)
-        } else {
-            computeStats(SPData)
+        if (urlOption === 'public') {
+            if (tabData.length > 1) {
+                computeStats(tabData)
+            } else {
+                computeStats(SPData)
+            }
+        }
+        else if (urlOption === 'server') {
+            if (tabDataSer.length > 1) {
+                computeStats(tabDataSer)
+            } else {
+                computeStats(SPData)
+            }
         }
     }
 
@@ -759,6 +826,12 @@ print('{"JileL":"', round(r2*100,2),'%","JileU":"',round(r1*100,2),'%","CileL":"
             customData(data)
         }
     }, [state.result])
+
+    useEffect(() => {
+        setValAtRisk(distOption === 'custom' ? state.stats.CileL : distOption === 'johnsonsu' ? state.stats.CileL : distOption === 'normal' ? state.stats.CNileL : state.stats.CTileL)
+        // Uses StudT FTM regardless of selection
+        setFatTailMult(distOption === 'custom' ? (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2) : distOption === 'johnsonsu' ? (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2) : distOption === 'normal' ? (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2) : (Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2))
+    }, [state.stats])
 
 
 
@@ -1675,7 +1748,7 @@ print(sol)
                 <div style={{
                     width: '390px',
                     display: 'grid',
-                    gridTemplateColumns: '60px 150px 500px',
+                    gridTemplateColumns: '60px 150px 350px 120px 80px',
                 }}>
                     <h1 style={{ margin: '5px', }}>Data</h1>
                     <div style={{
@@ -1717,8 +1790,8 @@ print(sol)
                                         <button onClick={convertCSVtoJSON}>Load Data</button>
                                     </div>
                                 </div>
-                                : inputOption === 'sqlapi' ? null
-                                    : inputOption === 'sqllocal' ? null
+                                : inputOption === 'sqlapi' ? <div />
+                                    : inputOption === 'sqllocal' ? <div />
                                         : inputOption === 'tableau' ?
                                             <div style={{
                                                 display: 'grid',
@@ -1732,6 +1805,26 @@ print(sol)
                                             </div>
                                             : null
                     }
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto',
+                        paddingLeft: '10px',
+                        paddingTop: '7px'
+                    }}>
+                        <div>
+                            <h4 style={{ margin: '5px 0px', }}>Risk Factor:</h4>
+                        </div>
+                    </div>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto',
+                        paddingLeft: '10px',
+                        paddingTop: '10px'
+                    }}>
+                        <div>
+                            <input value={riskFactor} onChange={(value) => handleRiskFactorChange(value)} style={{ width: '90px', height: '20px', border: '0', padding: '0' }} />
+                        </div>
+                    </div>
                 </div>
             </div>
             {state.stats.mean && (
@@ -2069,8 +2162,8 @@ print(sol)
                                     backgroundColor: 'rgba(192, 227, 227, 1)',
                                     width: '130px',
                                 }}>
-                                    <option value="CSV">CSV</option>
-                                    <option value="Tableau Server">Tableau Server</option>
+                                    <option value="csv">CSV</option>
+                                    <option value="tableau">Tableau Server</option>
                                     <option value="sql">SQL</option>
                                 </select>
                             </div>
@@ -2079,8 +2172,67 @@ print(sol)
                                 gridTemplateColumns: 'auto',
                                 paddingLeft: '10px',
                                 paddingTop: '10px',
-                            }}><div><button onClick={runBatFile}>Upload Data</button></div></div>
+                                // }}><div><button onClick={runBatFile}>Upload Data</button></div></div>
+                            }}><div><button onClick={handleDownload}>Upload Data</button></div></div>
                         </div>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '70px minmax(auto, 800px) 8px',
+                        }}>
+                            <div>
+                                Local:
+                            </div>
+                            <div style={{ maxWidth: '830px' }}>
+                                <input value={localLoc} onChange={(value) => handleLocalLocChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input>
+                            </div>
+                            <div />
+                        </div>
+                        {uploadOption === 'tableau' &&
+                            <div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '70px minmax(auto, 800px) 8px',
+                                }}>
+                                    <div>
+                                        Host:
+                                    </div>
+                                    <div style={{ maxWidth: '830px' }}>
+                                        <input value={host} onChange={(value) => handleHostChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input>
+                                    </div>
+                                    <div />
+                                </div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '70px minmax(auto, 800px) 8px',
+                                }}>
+                                    <div>
+                                        Remote:
+                                    </div>
+                                    <div style={{ maxWidth: '830px' }}>
+                                        <input value={sshLoc} onChange={(value) => handleSshLocChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input>
+                                    </div>
+                                    <div />
+                                </div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '70px minmax(auto, 122px) 20px 60px minmax(auto, 150px)',
+                                }}>
+                                    <div>
+                                        User:
+                                    </div>
+                                    <div>
+                                        <input value={user} onChange={(value) => handleUserChange(value)} style={{ width: '100%' }}></input>
+                                    </div>
+                                    <div />
+                                    <div>
+                                        Pass:
+                                    </div>
+                                    <div >
+                                        <input type="password" value={pass} onChange={(value) => handlePassChange(value)} style={{ width: '100%' }}></input>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                         <table style={{ border: '1px solid black', borderCollapse: 'collapse', width: 'auto' }}>
                             <thead>
                                 <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
@@ -2104,9 +2256,9 @@ print(sol)
                                     <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={returnPeriod} onChange={(value) => handleReturnPeriodChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
                                     <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={varModel} onChange={(value) => handleVarModelChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
                                     <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}><input value={lookback} onChange={(value) => handleLookbackChange(value)} style={{ width: '70px', height: '20px', border: '0', padding: '0' }} /></td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{distOption === 'custom' ? state.stats.CileL : distOption === 'johnsonsu' ? state.stats.CileL : distOption === 'normal' ? state.stats.CNileL : state.stats.CTileL}</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black' }}>{valAtRisk}</td>
                                     {/* replace next line code with custom FTM */}
-                                    <td style={{ border: '1px solid black', padding: '0px 19px', color: 'black' }}>{(Number(jStat.studentt.inv(percentile / 100, state.custom.cDf)) * Math.sqrt((state.custom.cDf - 2) / state.custom.cDf)).toFixed(2)}</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 19px', color: 'black' }}>{fatTailMult}</td>
                                 </tr>
                             </tbody>
                         </table>

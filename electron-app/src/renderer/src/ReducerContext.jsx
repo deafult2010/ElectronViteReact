@@ -30,7 +30,12 @@ const initialState = {
     urlpub: '',
     urlser: '',
     user: '',
-    pass: ''
+    pass: '',
+    sshUser: '',
+    sshPass: '',
+    localLoc: 'C:\\Users\\thoma\\Downloads\\',
+    sshLoc: '\\internal\\rod\\uploads\\tableau\\',
+    host: 'mft.euclearing.ice.com',
 };
 
 // Create the reducer function
@@ -222,6 +227,31 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 pass: action.payload
+            };
+        case 'SSHUSER':
+            return {
+                ...state,
+                sshUser: action.payload
+            };
+        case 'SSHPASS':
+            return {
+                ...state,
+                sshPass: action.payload
+            };
+        case 'LOCALLOC':
+            return {
+                ...state,
+                localLoc: action.payload
+            };
+        case 'SSHLOC':
+            return {
+                ...state,
+                sshLoc: action.payload
+            };
+        case 'HOST':
+            return {
+                ...state,
+                host: action.payload
             };
         default:
             return state;
