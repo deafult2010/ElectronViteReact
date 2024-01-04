@@ -143,6 +143,9 @@ const PVaR = () => {
     const handleVarModelChange = (e) => {
         setVarModel(e.target.value);
     };
+    const handleLookbackChange = (e) => {
+        setLookback(e.target.value);
+    };
 
     const ComputeBins = (returns) => {
         // Add bins
