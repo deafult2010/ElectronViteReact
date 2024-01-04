@@ -113,7 +113,7 @@ const PVaR = () => {
 
     const handleDownload = () => {
         const data = [{ BUSINESS_DATE: date, RISK_FACTOR: riskFactor, YEARS_TO_MATURITY: tenor, QUOTE_TYPE: quoteType, RETURN_PERIOD: returnPeriod, VAR_MODEL: varModel, OBSERVATIONS: lookback, VAR: valAtRisk }]
-        const fileName = `Haircuts_${Date.now()}.csv`
+        const fileName = `ICEU_HaircutVARs_${Date.now()}.csv`
         console.log(data)
         const csv = Papa.unparse(data);
         console.log(csv)
@@ -121,7 +121,7 @@ const PVaR = () => {
         if (uploadOption === 'csv') {
             window.api.saveBlob(csvData, localLoc + fileName);
         } else if (uploadOption === 'tableau') {
-            window.api.uploadBlob(csvData, localLoc + fileName, host, sshLoc, user, pass);
+            window.api.uploadBlob(csvData, localLoc + fileName, host, sshLoc + fileName, user, pass);
         }
     };
 
@@ -708,24 +708,29 @@ print(r)
                 }
             });
 
-            const NR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.NDiff));
-            const TR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.TDiff));
-            const JR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.JDiff));
-            const CR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CDiff));
-            const CNR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CNDiff));
-            const CTR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.CTDiff));
-            const NKS = NR * Math.sqrt(addCDFDiffs.length - 1)
-            const TKS = TR * Math.sqrt(addCDFDiffs.length - 1)
-            const JKS = JR * Math.sqrt(addCDFDiffs.length - 1)
-            const CKS = CR * Math.sqrt(addCDFDiffs.length - 1)
-            const CNKS = CNR * Math.sqrt(addCDFDiffs.length - 1)
-            const CTKS = CTR * Math.sqrt(addCDFDiffs.length - 1)
-            const NPV = Math.exp(-(NR ** 2) * (addCDFDiffs.length - 1) * 2)
-            const TPV = Math.exp(-(TR ** 2) * (addCDFDiffs.length - 1) * 2)
-            const JPV = Math.exp(-(JR ** 2) * (addCDFDiffs.length - 1) * 2)
-            const CPV = Math.exp(-(CR ** 2) * (addCDFDiffs.length - 1) * 2)
-            const CNPV = Math.exp(-(CNR ** 2) * (addCDFDiffs.length - 1) * 2)
-            const CTPV = Math.exp(-(CTR ** 2) * (addCDFDiffs.length - 1) * 2)
+            // const NR = Math.max(...addCDFDiffs.slice(1).map(obj => obj.NDiff));
+            const NR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.NDiff : 0));
+            const TR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.TDiff : 0));
+            const JR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.JDiff : 0));
+            const CR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.CDiff : 0));
+            const CNR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.CNDiff : 0));
+            const CTR = Math.max(...addCDFDiffs.slice(1).map(obj => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX ? obj.CTDiff : 0));
+            console.log(addCDFDiffs.length)
+            const count2 = addCDFDiffs.length
+            const count = addCDFDiffs.filter((obj) => parseFloat(obj.RankedReturn) > minX && parseFloat(obj.RankedReturn) < maxX).length;
+            console.log(count)
+            const NKS = NR * Math.sqrt(count2)
+            const TKS = TR * Math.sqrt(count2)
+            const JKS = JR * Math.sqrt(count2)
+            const CKS = CR * Math.sqrt(count2)
+            const CNKS = CNR * Math.sqrt(count2)
+            const CTKS = CTR * Math.sqrt(count2)
+            const NPV = Math.exp(-(NR ** 2) * (count2) * 2)
+            const TPV = Math.exp(-(TR ** 2) * (count2) * 2)
+            const JPV = Math.exp(-(JR ** 2) * (count2) * 2)
+            const CPV = Math.exp(-(CR ** 2) * (count2) * 2)
+            const CNPV = Math.exp(-(CNR ** 2) * (count2) * 2)
+            const CTPV = Math.exp(-(CTR ** 2) * (count2) * 2)
 
             dispatch({
                 type: 'KS',
@@ -745,7 +750,7 @@ print(r)
                 }
             });
         }
-    }, [state.data])
+    }, [state.data, minX, maxX])
 
     useEffect(() => {
         if (state.result.startsWith('{"JileL":')) {
@@ -2098,7 +2103,20 @@ print(sol)
                     </div>
                     <div>
                         <h1>CDFs</h1>
-                        <h2>K-S Tests <b className="tooltip">&#9432; <span className="tooltiptext">Kolmogorov–Smirnov (K-S) test: How likely is it that we would see a collection of samples like this if they were drawn from that probability distribution? A P-value of less than 5% indicates there is significant evidence to reject the null hypothesis that the samples could have been drawn from that probability distribution</span></b></h2>
+                        <div style={{
+                            width: '390px',
+                            display: 'grid',
+                            gridTemplateColumns: '130px 250px',
+                        }}>
+                            <h2>K-S Tests <b className="tooltip">&#9432; <span className="tooltiptext">Kolmogorov–Smirnov (K-S) test: How likely is it that we would see a collection of samples like this if they were drawn from that probability distribution? A P-value of less than 5% indicates there is significant evidence to reject the null hypothesis that the samples could have been drawn from that probability distribution</span></b></h2>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto',
+                                paddingLeft: '10px',
+                                paddingTop: '10px',
+                                // }}><div><button onClick={runBatFile}>Upload Data</button></div></div>
+                            }}><div><h5>Test Range: {minX}% to {maxX}%</h5></div></div>
+                        </div>
                         <div style={{
                             width: '480px',
                             backgroundColor: 'rgba(255, 255, 255, 0.8)',

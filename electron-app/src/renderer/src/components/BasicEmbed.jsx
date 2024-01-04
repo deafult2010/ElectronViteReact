@@ -23,6 +23,7 @@ function BasicEmbed() {
     const [urlOption, setUrlOption] = useState(state.urloption);
     // const url = 'https://public.tableau.com/views/JSAPI-Superstore/Overview?:language=en&:display_count=y&publish=yes&:origin=viz_share_link'
 
+    console.log(urlOption)
     const handleUrlOptionChange = (e) => {
         setUrlOption(e.target.value);
         dispatch({

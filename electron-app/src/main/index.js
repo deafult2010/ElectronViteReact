@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import child from 'child_process'
 import fs from 'fs-extra'
+import SFTPClient from 'ssh2-sftp-client'
 
 function createWindow() {
   // Create the browser window.
@@ -126,6 +127,23 @@ ipcMain.handle("uploadFile", (event, path, buffer, host, remote, user, pass) => 
     } else {
       console.log(`file saved here ${path}`)
       // add ssh code here
+      const config = {
+        host: host,
+        port: 22,
+        username: user,
+        password: pass
+      };
+      const client = new SFTPClient();
+      client.connect(config)
+        .then(() => {
+          return client.put(path, remote);
+        })
+        .then(() => {
+          return client.end();
+        })
+        .catch(err => {
+          console.error(err.message);
+        });
     }
   })
 })

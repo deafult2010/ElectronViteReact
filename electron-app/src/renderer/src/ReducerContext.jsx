@@ -33,6 +33,7 @@ const initialState = {
     pass: '',
     sshUser: '',
     sshPass: '',
+    // localLoc: 'C:\\Users\\tjaeger\\',
     localLoc: 'C:\\Users\\thoma\\Downloads\\',
     sshLoc: '\\internal\\rod\\uploads\\tableau\\',
     host: 'mft.euclearing.ice.com',
