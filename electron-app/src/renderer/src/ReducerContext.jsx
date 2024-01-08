@@ -37,6 +37,11 @@ const initialState = {
     localLoc: 'C:\\Users\\thoma\\Downloads\\',
     sshLoc: '\\internal\\rod\\uploads\\tableau\\',
     host: 'mft.euclearing.ice.com',
+    token: '',
+    server: '',
+    site: '',
+    ds: '',
+    view: '',
 };
 
 // Create the reducer function
@@ -253,6 +258,31 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 host: action.payload
+            };
+        case 'TOKEN':
+            return {
+                ...state,
+                token: action.payload
+            };
+        case 'SERVER':
+            return {
+                ...state,
+                server: action.payload
+            };
+        case 'SITE':
+            return {
+                ...state,
+                site: action.payload
+            };
+        case 'DS':
+            return {
+                ...state,
+                ds: action.payload
+            };
+        case 'VIEW':
+            return {
+                ...state,
+                view: action.payload
             };
         default:
             return state;

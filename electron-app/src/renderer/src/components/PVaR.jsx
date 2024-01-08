@@ -1,5 +1,6 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import Papa from "papaparse";
+import * as XLSX from 'xlsx';
 import jStat from "jstat";
 import { ReducerContext } from '../ReducerContext';
 import Chart from 'chart.js/auto'
@@ -113,15 +114,26 @@ const PVaR = () => {
 
     const handleDownload = () => {
         const data = [{ BUSINESS_DATE: date, RISK_FACTOR: riskFactor, YEARS_TO_MATURITY: tenor, QUOTE_TYPE: quoteType, RETURN_PERIOD: returnPeriod, VAR_MODEL: varModel, OBSERVATIONS: lookback, VAR: valAtRisk }]
-        const fileName = `ICEU_HaircutVARs_${Date.now()}.csv`
+        const fileName = `ICEU_HaircutVARs_${Date.now()}.xlsx`
+        // const fileName = `ICEU_HaircutVARs_${Date.now()}.csv`
         console.log(data)
-        const csv = Papa.unparse(data);
-        console.log(csv)
-        const csvData = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        const xlsxBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const blob = new Blob([xlsxBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        // const csv = Papa.unparse(data);
+        // const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         if (uploadOption === 'csv') {
-            window.api.saveBlob(csvData, localLoc + fileName);
+            window.api.saveBlob(blob, localLoc + fileName);
         } else if (uploadOption === 'tableau') {
-            window.api.uploadBlob(csvData, localLoc + fileName, host, sshLoc + fileName, user, pass);
+            window.api.uploadBlob(blob, localLoc + fileName, host, sshLoc + fileName, user, pass);
+            // wait 3 seconds for ssh upload to occur then run an extract refresh
+            setTimeout(() => {
+                // may need to change hard coded api value with future tableau server releases
+                const url = `${state.server}/api/3.17/sites/${state.site}/datasources/${state.ds}/refresh`
+                window.api.data(state.token, url);
+            }, 3000);
         }
     };
 

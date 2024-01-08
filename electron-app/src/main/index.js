@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, webContents } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import * as https from 'https'
 import icon from '../../resources/icon.png?asset'
 import child from 'child_process'
 import fs from 'fs-extra'
@@ -146,4 +147,43 @@ ipcMain.handle("uploadFile", (event, path, buffer, host, remote, user, pass) => 
         });
     }
   })
+})
+
+
+ipcMain.handle("login", async (event, user, pass, url) => {
+  try {
+    const xml_payload = `tsResquest><credentials name="${user}" password=${pass}"><site contentUrl="PROD_ICEU" /> <credentials><tsRequest>`
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.post(url, xml_payload, {headers: {'content-type': 'text/plain'}, httpsAgent: agent});
+    return response.data.credentials.token
+  } catch(error) {
+    console.error(error);
+  }
+})
+
+ipcMain.handle("refresh", async (event, token, url) => {
+  try {
+    const xml_payload = `tsResquest><tsRequest>`
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.post(url, xml_payload, {headers: {'content-type': 'text/plain', 'X-Tableau-Auth' : token}, httpsAgent: agent});
+    return response.data.job.id
+  } catch(error) {
+    console.error(error);
+  }
+})
+
+ipcMain.handle("data", async (event, token, url) => {
+  try {
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.get(url, xml_payload, {headers: {'X-Tableau-Auth' : token}, httpsAgent: agent});
+    return response.data
+  } catch(error) {
+    console.error(error);
+  }
 })

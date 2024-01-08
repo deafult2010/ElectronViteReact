@@ -21,6 +21,11 @@ function BasicEmbed() {
     const [user, setUser] = useState(state.user);
     const [pass, setPass] = useState(state.pass);
     const [urlOption, setUrlOption] = useState(state.urloption);
+    const [token, setToken] = useState(state.token);
+    const [server, setServer] = useState(state.server);
+    const [site, setSite] = useState(state.site);
+    const [ds, setDs] = useState(state.ds);
+    const [view, setView] = useState(state.view);
     // const url = 'https://public.tableau.com/views/JSAPI-Superstore/Overview?:language=en&:display_count=y&publish=yes&:origin=viz_share_link'
 
     console.log(urlOption)
@@ -58,6 +63,53 @@ function BasicEmbed() {
             type: 'PASS',
             payload: e.target.value
         });
+    };
+
+    const handleSiteChange = (e) => {
+        setSite(e.target.value);
+        dispatch({
+            type: 'SITE',
+            payload: e.target.value
+        });
+    };
+    const handleServerChange = (e) => {
+        setServer(e.target.value);
+        dispatch({
+            type: 'SERVER',
+            payload: e.target.value
+        });
+    };
+    const handleDsChange = (e) => {
+        setDs(e.target.value);
+        dispatch({
+            type: 'DS',
+            payload: e.target.value
+        });
+    };
+    const handleViewChange = (e) => {
+        setView(e.target.value);
+        dispatch({
+            type: 'VIEW',
+            payload: e.target.value
+        });
+    };
+
+    const signIn = async () => {
+        // may need to change hard coded api value with future tableau server releases
+        const url = `${server}/api/3.17/auth/signin`
+        const resTok = await window.api.login(user, pass, url)
+        setToken(resTok);
+        dispatch({
+            type: 'TOKEN',
+            payload: resTok
+        });
+    };
+
+    const loadData = async () => {
+        // may need to change hard coded api value with future tableau server releases
+        const url = `${server}/api/3.17/sites/${site}/views/${view}/data`
+        const resData = await window.api.data(token, url)
+        console.log(resData)
     };
 
 
@@ -198,28 +250,30 @@ function BasicEmbed() {
         vizi.refreshDataAsync();
     }
 
-    const workbook = () => {
+    const workbook = async () => {
         console.log('click')
 
-        dispatch({
-            type: 'TABDATA',
-            payload: tabData
-        });
 
-        dispatch({
-            type: 'PARAM',
-            payload: paramData
-        });
 
-        dispatch({
-            type: 'TABDATA_SER',
-            payload: tabDataSer
-        });
+        // dispatch({
+        //     type: 'TABDATA',
+        //     payload: tabData
+        // });
 
-        dispatch({
-            type: 'PARAM_SER',
-            payload: paramDataSer
-        });
+        // dispatch({
+        //     type: 'PARAM',
+        //     payload: paramData
+        // });
+
+        // dispatch({
+        //     type: 'TABDATA_SER',
+        //     payload: tabDataSer
+        // });
+
+        // dispatch({
+        //     type: 'PARAM_SER',
+        //     payload: paramDataSer
+        // });
 
         // Get Filters Data
         // dashi.getFiltersAsync().then((item) => {
@@ -277,8 +331,9 @@ function BasicEmbed() {
             }}>
                 <option value="public">Tableau Public</option>
                 <option value="server">Tableau Server</option>
+                <option value="restapi">REST API</option>
             </select>
-            {urlOption === 'server' &&
+            {urlOption !== 'public' &&
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: '60px minmax(auto, 122px) 20px 60px minmax(auto, 150px) 150px auto',
@@ -298,31 +353,87 @@ function BasicEmbed() {
                     </div>
                 </div>
             }
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '60px minmax(auto, 800px) 20px 130px',
-            }}>
+            {urlOption != 'restapi' &&
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '60px minmax(auto, 800px) 20px 130px',
+                }}>
+                    <div>
+                        URL:
+                    </div>
+                    <div style={{ maxWidth: '830px' }}>
+                        {urlOption === 'public' ? <input value={publicUrl} onChange={(value) => handlePublicUrlChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input> : <input value={serverUrl} onChange={(value) => handleServerUrlChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input>}
+                    </div>
+                    <div />
+                    <div style={{ maxWidth: '830px' }}>
+                        <button onClick={loadDashboard}>Load Dashboard</button>
+                    </div>
+                </div>
+            }
+            {urlOption === 'restapi' &&
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '60px minmax(auto, 122px) 20px 60px minmax(auto, 150px) 200px',
+                }}>
+                    <div>
+                        Server:
+                    </div>
+                    <div>
+                        <input value={server} onChange={(value) => handleServerChange(value)} style={{ width: '100%' }}></input>
+                    </div>
+                    <div />
+                    <div>
+                        Site ID:
+                    </div>
+                    <div >
+                        <input type="password" value={site} onChange={(value) => handleSiteChange(value)} style={{ width: '100%' }}></input>
+                    </div>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto',
+                        paddingLeft: '10px',
+                    }}>
+                        <div style={{ maxWidth: '830px' }}>
+                            <button onClick={signIn}>Sign In</button>
+                        </div>
+                    </div>
+                    <div>
+                        DS ID:
+                    </div>
+                    <div>
+                        <input value={ds} onChange={(value) => handleDsChange(value)} style={{ width: '100%' }}></input>
+                    </div>
+                    <div />
+                    <div>
+                        View ID:
+                    </div>
+                    <div >
+                        <input type="password" value={view} onChange={(value) => handleViewChange(value)} style={{ width: '100%' }}></input>
+                    </div>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto',
+                        paddingLeft: '10px',
+                    }}>
+                        <div style={{ maxWidth: '830px' }}>
+                            <button onClick={loadData}>Load Data</button>
+                        </div>
+                    </div>
+                </div>
+            }
+            {urlOption != 'restapi' ?
                 <div>
-                    URL:
+                    <button onClick={exportImage}>Download Printable Image</button>
+                    <button onClick={exportPDF}>Export PDF</button>
+                    <button onClick={exportData}>Export Data</button>
+                    <button onClick={exportCrossTab}>Export Crosstab</button>
+                    <button onClick={revertAll}>Reset Filters</button>
+                    <button onClick={refreshData}>Refresh Data</button>
+                    <button onClick={workbook}>Workbook</button>
+                    {/* <button onClick={toggleFullscreen}>Toggle Fullscreen</button> */}
+                    <div ref={ref} style={{ display: 'inline' }} />
                 </div>
-                <div style={{ maxWidth: '830px' }}>
-                    {urlOption === 'public' ? <input value={publicUrl} onChange={(value) => handlePublicUrlChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input> : <input value={serverUrl} onChange={(value) => handleServerUrlChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input>}
-                </div>
-                <div />
-                <div style={{ maxWidth: '830px' }}>
-                    <button onClick={loadDashboard}>Load Dashboard</button>
-                </div>
-            </div>
-            <button onClick={exportImage}>Download Printable Image</button>
-            <button onClick={exportPDF}>Export PDF</button>
-            <button onClick={exportData}>Export Data</button>
-            <button onClick={exportCrossTab}>Export Crosstab</button>
-            <button onClick={revertAll}>Reset Filters</button>
-            <button onClick={refreshData}>Refresh Data</button>
-            <button onClick={workbook}>Workbook</button>
-            {/* <button onClick={toggleFullscreen}>Toggle Fullscreen</button> */}
-            <div ref={ref} style={{ display: 'inline' }} />
-
+                : <div ref={ref} style={{ display: 'none' }} />}
         </div>
 
     )

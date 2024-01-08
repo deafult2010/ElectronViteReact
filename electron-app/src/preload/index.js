@@ -34,7 +34,20 @@ const api = {
       }
     }
     reader.readAsArrayBuffer(blob)
-  }
+  },
+  // not sure if I need to run these axios requests in main or if I could just run them here in preload
+  login: async (user, pass, url) => {
+    const res = await ipcRenderer.invoke('login', user, pass, url)
+    return res
+  },
+  refresh: async (token, url) => {
+    const res = await ipcRenderer.invoke('refresh', token, url)
+    return res
+  },
+  data: async (token, url) => {
+    const res = await ipcRenderer.invoke('data', token, url)
+    return res
+  },
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
