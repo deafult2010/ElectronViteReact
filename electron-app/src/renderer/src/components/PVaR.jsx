@@ -46,7 +46,7 @@ const PVaR = () => {
     const [tenor, setTenor] = useState(0)
     const [quoteType, setQuoteType] = useState('Price')
     const [returnPeriod, setReturnPeriod] = useState(1)
-    const [varModel, setVarModel] = useState('Parametric')
+    const [varModel, setVarModel] = useState('PARAMETRIC')
     const [lookback, setLookback] = useState(1000)
     const [valAtRisk, setValAtRisk] = useState(0)
     const [fatTailMult, setFatTailMult] = useState(0)
@@ -132,7 +132,7 @@ const PVaR = () => {
             setTimeout(() => {
                 // may need to change hard coded api value with future tableau server releases
                 const url = `${state.server}/api/3.17/sites/${state.site}/datasources/${state.ds}/refresh`
-                window.api.data(state.token, url);
+                window.api.refresh(state.token, url);
             }, 3000);
         }
     };

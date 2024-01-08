@@ -6,6 +6,7 @@ import icon from '../../resources/icon.png?asset'
 import child from 'child_process'
 import fs from 'fs-extra'
 import SFTPClient from 'ssh2-sftp-client'
+import axios from 'axios';
 
 function createWindow() {
   // Create the browser window.
@@ -152,7 +153,7 @@ ipcMain.handle("uploadFile", (event, path, buffer, host, remote, user, pass) => 
 
 ipcMain.handle("login", async (event, user, pass, url) => {
   try {
-    const xml_payload = `tsResquest><credentials name="${user}" password=${pass}"><site contentUrl="PROD_ICEU" /> <credentials><tsRequest>`
+    const xml_payload = `<tsRequest><credentials name="${user}" password="${pass}"><site contentUrl="PROD_ICEU" /></credentials></tsRequest>`
     const agent = new https.Agent({
       rejectUnauthorized: false
     });
@@ -165,7 +166,7 @@ ipcMain.handle("login", async (event, user, pass, url) => {
 
 ipcMain.handle("refresh", async (event, token, url) => {
   try {
-    const xml_payload = `tsResquest><tsRequest>`
+    const xml_payload = `<tsRequest></tsRequest>`
     const agent = new https.Agent({
       rejectUnauthorized: false
     });
@@ -181,7 +182,7 @@ ipcMain.handle("data", async (event, token, url) => {
     const agent = new https.Agent({
       rejectUnauthorized: false
     });
-    const response = await axios.get(url, xml_payload, {headers: {'X-Tableau-Auth' : token}, httpsAgent: agent});
+    const response = await axios.get(url, {headers: {'X-Tableau-Auth' : token}, httpsAgent: agent});
     return response.data
   } catch(error) {
     console.error(error);

@@ -25,7 +25,7 @@ const initialState = {
     tabDataSer: [],
     paramSer: '',
     url: 'https://public.tableau.com/views/Returns_17038617360470/Dashboard?:language=en-US&:display_count=n&:origin=viz_share_link',
-    serverurl: 'https://eucltableau.intcx/iceu/abc/views/xyz',
+    serverurl: 'https://eucltableau.intcx/t/PROD_ICEU/views/PriceData/Dashboard',
     urloption: '',
     urlpub: '',
     urlser: '',

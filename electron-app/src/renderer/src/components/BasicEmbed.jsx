@@ -129,7 +129,7 @@ function BasicEmbed() {
         if (viz) {
             viz.dispose();
         }
-        urlOption === 'public' ? viz = new tableau.Viz(ref.current, publicUrl, options) : viz = new tableau.Viz(ref.current, publicUrl, options)
+        urlOption === 'public' ? viz = new tableau.Viz(ref.current, publicUrl, options) : viz = new tableau.Viz(ref.current, serverUrl, options)
         // vizServer = new tableau.Viz(ref.current, serverUrl, options)
         setVizi(viz);
         // setViziServer(viz);
