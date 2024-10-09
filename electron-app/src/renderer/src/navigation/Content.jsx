@@ -23,7 +23,7 @@ function Header() {
                             <Link to="/pvar">PVaR</Link>
                         </li>
                         <li>
-                            <Link to="/fhvar">FHS</Link>
+                            <Link to="/fhs">FHS</Link>
                         </li>
                         <li>
                             <Link to="/pca">PCA</Link>
@@ -36,6 +36,9 @@ function Header() {
                         </li>
                         <li>
                             <Link to="/ccr">CCR</Link>
+                        </li>
+                        <li>
+                            <Link to="/irm">IRM</Link>
                         </li>
                         <li>
                             <Link to="/tab">Tab</Link>

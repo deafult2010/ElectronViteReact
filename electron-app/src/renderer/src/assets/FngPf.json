@@ -1,0 +1,10 @@
+[
+  {
+    "id": "P001",
+    "exch": "IFUS",
+    "commodity": "FNG",
+    "secType": "FUT",
+    "expiry": "202406",
+    "longQty": "2500"
+  }
+]

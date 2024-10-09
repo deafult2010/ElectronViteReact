@@ -36,6 +36,7 @@ const api = {
     reader.readAsArrayBuffer(blob)
   },
   // not sure if I need to run these axios requests in main or if I could just run them here in preload
+  // TABLEAU SERVER
   login: async (user, pass, url) => {
     const res = await ipcRenderer.invoke('login', user, pass, url)
     return res
@@ -47,6 +48,21 @@ const api = {
   data: async (token, url) => {
     const res = await ipcRenderer.invoke('data', token, url)
     return res
+  },
+  // IRM ICA
+  authenicate: async (user, pass, url) => {
+    const res = await ipcRenderer.invoke('authenticate', user, pass, url)
+    return res
+  },
+  calcIRM: async (pf, token, url) => {
+    try {
+      const res = await ipcRenderer.invoke('calcIRM', pf, token, url)
+      console.log(res)
+      return res
+    } catch (err) {
+      console.log(err)
+      return err
+    }
   },
 }
 

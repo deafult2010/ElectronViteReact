@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const Pric = () => {
+const PCA = () => {
 
     const [inputOption, setInputOption] = useState('local');
 
@@ -10,7 +10,7 @@ const Pric = () => {
 
     return (
         <div>
-            <h1 style={{ margin: '0px', textAlign: 'center' }}>Option Pricing</h1>
+            <h1 style={{ margin: '0px', textAlign: 'center' }}>Principal Component Analysis (PCA)</h1>
             <div style={{ paddingLeft: '10px', }}>
                 <div style={{
                     width: '390px',
@@ -78,4 +78,4 @@ const Pric = () => {
     );
 };
 
-export default Pric;
+export default PCA;

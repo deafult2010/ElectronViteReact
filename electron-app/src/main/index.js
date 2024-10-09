@@ -112,6 +112,7 @@ ipcMain.handle("runBat", (e, fileName) => {
   })
 });
 
+// code to save file
 ipcMain.handle("saveFile", (event, path, buffer) => {
   fs.outputFile(path, buffer, err => {
     if (err) {
@@ -122,6 +123,7 @@ ipcMain.handle("saveFile", (event, path, buffer) => {
   })
 })
 
+// code to upload file to MFT
 ipcMain.handle("uploadFile", (event, path, buffer, host, remote, user, pass) => {
   fs.outputFile(path, buffer, err => {
     if (err) {
@@ -150,41 +152,77 @@ ipcMain.handle("uploadFile", (event, path, buffer, host, remote, user, pass) => 
   })
 })
 
-
+// ---------------------------------------------------------
+// TABLEAU SERVER
+// code to log in
 ipcMain.handle("login", async (event, user, pass, url) => {
   try {
     const xml_payload = `<tsRequest><credentials name="${user}" password="${pass}"><site contentUrl="PROD_ICEU" /></credentials></tsRequest>`
     const agent = new https.Agent({
       rejectUnauthorized: false
     });
-    const response = await axios.post(url, xml_payload, {headers: {'content-type': 'text/plain'}, httpsAgent: agent});
+    const response = await axios.post(url, xml_payload, { headers: { 'content-type': 'text/plain' }, httpsAgent: agent });
     return response.data.credentials.token
-  } catch(error) {
+  } catch (error) {
     console.error(error);
   }
 })
 
+// code to log run a data source extract refresh 
 ipcMain.handle("refresh", async (event, token, url) => {
   try {
     const xml_payload = `<tsRequest></tsRequest>`
     const agent = new https.Agent({
       rejectUnauthorized: false
     });
-    const response = await axios.post(url, xml_payload, {headers: {'content-type': 'text/plain', 'X-Tableau-Auth' : token}, httpsAgent: agent});
+    const response = await axios.post(url, xml_payload, { headers: { 'content-type': 'text/plain', 'X-Tableau-Auth': token }, httpsAgent: agent });
     return response.data.job.id
-  } catch(error) {
+  } catch (error) {
     console.error(error);
   }
 })
 
+// code to run a get request
 ipcMain.handle("data", async (event, token, url) => {
   try {
     const agent = new https.Agent({
       rejectUnauthorized: false
     });
-    const response = await axios.get(url, {headers: {'X-Tableau-Auth' : token}, httpsAgent: agent});
+    const response = await axios.get(url, { headers: { 'X-Tableau-Auth': token }, httpsAgent: agent });
     return response.data
-  } catch(error) {
+  } catch (error) {
     console.error(error);
+  }
+})
+
+// ---------------------------------------------------------
+// ICA IRM
+// code to authenticate
+ipcMain.handle("authenticate", async (event, user, pass, url) => {
+  try {
+    const json = `{ "username": "${user}", "password": "${pass}" }`
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.post(url, json, { headers: { 'content-type': 'application/json' }, httpsAgent: agent });
+    return response.data.token
+  } catch (error) {
+    console.error(error);
+  }
+})
+
+// code to run IRM Calc
+ipcMain.handle("calcIRM", async (event, pf, token, url) => {
+  try {
+    const json = JSON.stringify(pf);
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.post(url, json, { headers: { 'content-type': 'application/json', 'AuthenticationToken': token }, httpsAgent: agent });
+    return response.data
+  } catch (error) {
+    console.error(error);
+    console.error(error.response.data);
+    return error.response.data
   }
 })

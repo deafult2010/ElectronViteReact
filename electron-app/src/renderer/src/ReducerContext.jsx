@@ -26,7 +26,7 @@ const initialState = {
     paramSer: '',
     url: 'https://public.tableau.com/views/Returns_17038617360470/Dashboard?:language=en-US&:display_count=n&:origin=viz_share_link',
     serverurl: 'https://eucltableau.intcx/t/PROD_ICEU/views/PriceData/Dashboard',
-    urloption: '',
+    urloption: 'public',
     urlpub: '',
     urlser: '',
     user: '',
@@ -42,6 +42,10 @@ const initialState = {
     site: '',
     ds: '',
     view: '',
+    userICA: '',
+    passICA: '',
+    tokenICA: '',
+    portfolio: [],
 };
 
 // Create the reducer function
@@ -283,6 +287,26 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 view: action.payload
+            };
+        case 'USER_ICA':
+            return {
+                ...state,
+                userICA: action.payload
+            };
+        case 'PASS_ICA':
+            return {
+                ...state,
+                passICA: action.payload
+            };
+        case 'TOKEN_ICA':
+            return {
+                ...state,
+                tokenICA: action.payload
+            };
+        case 'PORTFOLIO':
+            return {
+                ...state,
+                portfolio: action.payload
             };
         default:
             return state;
