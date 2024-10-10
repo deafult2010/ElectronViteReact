@@ -208,6 +208,7 @@ ipcMain.handle("authenticate", async (event, user, pass, url) => {
     return response.data.token
   } catch (error) {
     console.error(error);
+    return error.response.data
   }
 })
 
@@ -215,6 +216,38 @@ ipcMain.handle("authenticate", async (event, user, pass, url) => {
 ipcMain.handle("calcIRM", async (event, pf, token, url) => {
   try {
     const json = JSON.stringify(pf);
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.post(url, json, { headers: { 'content-type': 'application/json', 'AuthenticationToken': token }, httpsAgent: agent });
+    return response.data
+  } catch (error) {
+    console.error(error);
+    console.error(error.response.data);
+    return error.response.data
+  }
+})
+
+// code to Invoke IRM
+ipcMain.handle("invokeIRM", async (event, pf, token, url) => {
+  try {
+    const json = JSON.stringify(pf);
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+    const response = await axios.post(url, json, { headers: { 'content-type': 'application/json', 'AuthenticationToken': token }, httpsAgent: agent });
+    return response.data
+  } catch (error) {
+    console.error(error);
+    console.error(error.response.data);
+    return error.response.data
+  }
+})
+
+// code to get IRM
+ipcMain.handle("getIRM", async (event, id, token, url) => {
+  try {
+    const json = `{ "referenceId": "${id}" }`
     const agent = new https.Agent({
       rejectUnauthorized: false
     });

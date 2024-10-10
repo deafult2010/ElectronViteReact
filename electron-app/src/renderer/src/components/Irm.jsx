@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from "react";
 import Papa from "papaparse";
 import { ReducerContext } from '../ReducerContext';
 import FngPf from '../assets/FngPf.json'
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const IRM = () => {
     const { state, dispatch } = useContext(ReducerContext);
@@ -9,8 +11,11 @@ const IRM = () => {
     const [inputOption, setInputOption] = useState('local');
     const [user, setUser] = useState(state.userICA);
     const [pass, setPass] = useState(state.passICA);
+    const [start, setStart] = useState(state.startICA);
+    const [end, setEnd] = useState(state.endICA);
     const [token, setToken] = useState(state.tokenICA);
-    const [result, setResult] = useState('');
+    const [result, setResult] = useState([]);
+    const [checkOption, setCheckOption] = useState(true);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -19,6 +24,11 @@ const IRM = () => {
 
     const handleInputChange = (e) => {
         setInputOption(e.target.value);
+    };
+
+    const handleCheckInputChange = (e) => {
+        e.preventDefault();
+        setCheckOption(!checkOption);
     };
 
     const convertCSVtoJSON = () => {
@@ -51,9 +61,12 @@ const IRM = () => {
     }
 
     const signIn = async () => {
-        // may need to change hard coded api value with future tableau server releases
         const url = `https://ica.ice.com/ICA/Api/v1/Authenticate`
         const resTok = await window.api.authenicate(user, pass, url)
+        if (resTok.status == 'Failure') {
+            toast.error(resTok.errorDescription);
+            return;
+        }
         setToken(resTok);
         dispatch({
             type: 'TOKEN_ICA',
@@ -61,23 +74,12 @@ const IRM = () => {
         });
     };
 
+    const clearResults = () => {
+        setResult([])
+    }
+
     const calcIRM = async () => {
-        // may need to change hard coded api value with future tableau server releases
         const url = `https://ica.ice.com/ICA/Api/v1/CalculateIrmIm`
-
-        {
-            state.portfolio.map((item, index) => (
-                <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
-                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.id}</td>
-                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.exch}</td>
-                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.commodity}</td>
-                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.secType}</td>
-                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.expiry}</td>
-                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.longQty}</td>
-                </tr>
-            ))
-        }
-
         const pf = {
             "portfolios": [
                 {
@@ -95,7 +97,30 @@ const IRM = () => {
         }
         const res = await window.api.calcIRM(pf, token, url)
         console.log(res)
-        res.portfolios ? setResult(res.portfolios[0].currencies[0].im) : setResult(res.errorDescription);
+        res.portfolios ? setResult(prev => ([...prev, { "id": res.portfolios[0].id, "date": res.bizDates[0].date, "im": res.portfolios[0].currencies[0].im }])) : toast.error(res.errorDescription);
+    };
+
+    const invokeIRM = async () => {
+        const url = `https://ica.ice.com/ICA/Api/v1/InvokeIrmIm`
+        const pf = {
+            "bizDate": "2024-10-09",
+            "portfolios": [
+                {
+                    "id": "Pf1",
+                    "positions": state.portfolio.map(item => ({
+                        "id": item.id,
+                        "exch": item.exch,
+                        "commodity": item.commodity,
+                        "secType": item.secType,
+                        "expiry": item.expiry,
+                        "longQty": item.longQty
+                    }))
+                }
+            ]
+        }
+        const res = await window.api.calcIRM(pf, token, url)
+        console.log(res)
+        res.referenceId ? getIRM(res.referenceId) : toast.error(res.errorDescription);
     };
 
     const handleUserChange = (e) => {
@@ -109,6 +134,21 @@ const IRM = () => {
         setPass(e.target.value);
         dispatch({
             type: 'PASS_ICA',
+            payload: e.target.value
+        });
+    };
+
+    const handleStartChange = (e) => {
+        setStart(e.target.value);
+        dispatch({
+            type: 'DATE_START',
+            payload: e.target.value
+        });
+    };
+    const handleEndChange = (e) => {
+        setEnd(e.target.value);
+        dispatch({
+            type: 'DATE_END',
             payload: e.target.value
         });
     };
@@ -127,6 +167,7 @@ const IRM = () => {
 
     return (
         <div>
+            <ToastContainer position="top-center" theme="colored" />
             <h1 style={{ margin: '0px', textAlign: 'center' }}>ICE Risk Model (IRM)</h1>
             <div style={{ paddingLeft: '10px', }}>
                 <div style={{
@@ -210,50 +251,109 @@ const IRM = () => {
                 </div>
             </div>
             <div style={{ maxWidth: '830px' }}>
-                <button onClick={signIn}>Sign In</button>
+                <button onClick={signIn}>Sign In</button> {token ? <span>Signed in as: {token.substring(0, 6)}</span> : null}
             </div>
+            {checkOption ?
+                <div style={{
+                    width: '640px',
+                    display: 'grid',
+                    gridTemplateColumns: '270px 370px',
+                }}>
+                    <h1 style={{ margin: '5px', }}>Calculate Top Day IM</h1>
+                    <div style={{
+                        margin: 'auto auto 12px 0px',
+                        padding: '0 20px',
+                    }}>
+                        OR: Calculate For Historical Date Range? <input type="checkbox" id="myCheck" value={checkOption} onClick={handleCheckInputChange}></input>
+                    </div>
+                </div>
+                :
+                <div>
+                    <div style={{
+                        width: '640px',
+                        display: 'grid',
+                        gridTemplateColumns: '270px 370px',
+                    }}>
+                        <h1 style={{ margin: '5px', }}>Calculate Historical IM</h1>
+                        <div style={{
+                            margin: 'auto auto 12px 0px',
+                            padding: '0 20px',
+                        }}>
+                            OR: Calculate Top Day? <input type="checkbox" id="myCheck" value={checkOption} onClick={handleCheckInputChange}></input>
+                        </div>
+                    </div>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '60px minmax(auto, 122px) 20px 60px minmax(auto, 150px) 150px auto',
+                    }}>
+                        <div>
+                            Start:
+                        </div>
+                        <div>
+                            <input value={start} onChange={(value) => handleStartChange(value)} style={{ width: '100%' }} placeholder="yyyy-mm-dd"></input>
+                        </div>
+                        <div />
+                        <div>
+                            End:
+                        </div>
+                        <div >
+                            <input value={end} onChange={(value) => handleEndChange(value)} style={{ width: '100%' }} placeholder="yyyy-mm-dd"></input>
+                        </div>
+                    </div>
+                </div>
+            }
             <div style={{ maxWidth: '830px' }}>
-                <button onClick={calcIRM}>Calculate</button>
+                <button onClick={checkOption ? calcIRM : invokeIRM}>Calculate</button> <button onClick={clearResults}>Clear</button>
             </div>
-            <div style={{ maxWidth: '830px' }}>
-                Result: {result < 0 ? `$${Math.abs(result).toLocaleString()}` : result}
-            </div>
+            <h1 style={{ margin: '5px', }}>Results</h1>
+            {result.length > 0 ?
+                <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                            <th style={{ border: '1px solid black', padding: '0px 29px' }}>Id</th>
+                            <th style={{ border: '1px solid black', padding: '0px 32px' }}>Date</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>IM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {result.map((item, index) => (
+                            <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.id}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.date}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>${Math.abs(item.im).toLocaleString()}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                : null}
             <div>
                 <h1>Positions</h1>
-                <div style={{
-                    // width: '480px',
-                    // backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    display: 'grid',
-                    gridTemplateColumns: '300px 50px auto',
-                    padding: '10px'
-                }}>
-                    <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
-                                <th style={{ border: '1px solid black', padding: '0px 29px' }}>Id</th>
-                                <th style={{ border: '1px solid black', padding: '0px 8px' }}>Exch</th>
-                                <th style={{ border: '1px solid black', padding: '0px 8px' }}>Commodity</th>
-                                <th style={{ border: '1px solid black', padding: '0px 8px' }}>SecType</th>
-                                <th style={{ border: '1px solid black', padding: '0px 8px' }}>Expiry</th>
-                                <th style={{ border: '1px solid black', padding: '0px 8px' }}>LongQty</th>
+                <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                            <th style={{ border: '1px solid black', padding: '0px 29px' }}>Id</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>Exch</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>Commodity</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>SecType</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>Expiry</th>
+                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>LongQty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {state.portfolio.map((item, index) => (
+                            <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.id}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.exch}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.commodity}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.secType}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.expiry}</td>
+                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.longQty}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {state.portfolio.map((item, index) => (
-                                <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.id}</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.exch}</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.commodity}</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.secType}</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.expiry}</td>
-                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.longQty}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-        </div >
+        </div>
     );
 };
 

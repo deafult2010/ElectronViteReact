@@ -26,6 +26,7 @@
     "jstat": "^1.9.6",
     "papaparse": "^5.4.1",
     "react-router-dom": "^6.18.0",
+    "react-toastify": "^10.0.5",
     "ssh2-sftp-client": "^9.1.0",
     "tableau-api": "^2.2.3",
     "xlsx": "^0.18.5",

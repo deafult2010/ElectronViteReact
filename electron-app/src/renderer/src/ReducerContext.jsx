@@ -44,6 +44,8 @@ const initialState = {
     view: '',
     userICA: '',
     passICA: '',
+    startICA: '',
+    endICA: '',
     tokenICA: '',
     portfolio: [],
 };
@@ -297,6 +299,16 @@ const reducer = (state, action) => {
             return {
                 ...state,
                 passICA: action.payload
+            };
+        case 'DATE_START':
+            return {
+                ...state,
+                startICA: action.payload
+            };
+        case 'DATE_END':
+            return {
+                ...state,
+                endICA: action.payload
             };
         case 'TOKEN_ICA':
             return {

@@ -55,14 +55,16 @@ const api = {
     return res
   },
   calcIRM: async (pf, token, url) => {
-    try {
-      const res = await ipcRenderer.invoke('calcIRM', pf, token, url)
-      console.log(res)
-      return res
-    } catch (err) {
-      console.log(err)
-      return err
-    }
+    const res = await ipcRenderer.invoke('calcIRM', pf, token, url)
+    return res
+  },
+  invokeIRM: async (pf, token, url) => {
+    const res = await ipcRenderer.invoke('invokeIRM', pf, token, url)
+    return res
+  },
+  getIRM: async (pf, token, url) => {
+    const res = await ipcRenderer.invoke('getIRM', id, token, url)
+    return res
   },
 }
 
