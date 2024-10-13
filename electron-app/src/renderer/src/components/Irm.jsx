@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import Papa from "papaparse";
+import * as XLSX from 'xlsx';
 import { ReducerContext } from '../ReducerContext';
 import FngPf from '../assets/FngPf.json'
 import { ToastContainer, toast } from 'react-toastify';
@@ -16,6 +17,7 @@ const IRM = () => {
     const [token, setToken] = useState(state.tokenICA);
     const [result, setResult] = useState([]);
     const [checkOption, setCheckOption] = useState(true);
+    const [localLoc, setLocalLoc] = useState(state.localLoc)
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -30,6 +32,14 @@ const IRM = () => {
         e.preventDefault();
         setCheckOption(!checkOption);
     };
+
+    const handleLocalLocChange = (e) => {
+        setLocalLoc(e.target.value);
+        dispatch({
+            type: 'LOCALLOC',
+            payload: e.target.value
+        });
+    }
 
     const convertCSVtoJSON = () => {
         Papa.parse(csvFile, {
@@ -61,7 +71,7 @@ const IRM = () => {
     }
 
     const signIn = async () => {
-        const url = `https://ica.ice.com/ICA/Api/v1/Authenticate`
+        const url = `https://ica.uat.ice.com/ICA/Api/v1/Authenticate`
         const resTok = await window.api.authenicate(user, pass, url)
         if (resTok.status == 'Failure') {
             toast.error(resTok.errorDescription);
@@ -79,7 +89,7 @@ const IRM = () => {
     }
 
     const calcIRM = async () => {
-        const url = `https://ica.ice.com/ICA/Api/v1/CalculateIrmIm`
+        const url = `https://ica.uat.ice.com/ICA/Api/v1/CalculateIrmIm`
         const pf = {
             "portfolios": [
                 {
@@ -100,27 +110,78 @@ const IRM = () => {
         res.portfolios ? setResult(prev => ([...prev, { "id": res.portfolios[0].id, "date": res.bizDates[0].date, "im": res.portfolios[0].currencies[0].im }])) : toast.error(res.errorDescription);
     };
 
-    const invokeIRM = async () => {
-        const url = `https://ica.ice.com/ICA/Api/v1/InvokeIrmIm`
-        const pf = {
-            "bizDate": "2024-10-09",
-            "portfolios": [
-                {
-                    "id": "Pf1",
-                    "positions": state.portfolio.map(item => ({
-                        "id": item.id,
-                        "exch": item.exch,
-                        "commodity": item.commodity,
-                        "secType": item.secType,
-                        "expiry": item.expiry,
-                        "longQty": item.longQty
-                    }))
-                }
-            ]
+
+    function getBusinessDates(startDate, endDate) {
+        const businessDates = [];
+        const currentDate = new Date(startDate);
+
+        // Loop through the dates from start to end
+        while (currentDate <= endDate) {
+            // Check if the current date is a weekday (Monday to Friday)
+            const day = currentDate.getDay();
+            if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
+                // Format the date as 'YYYY-MM-DD'
+                const formattedDate = currentDate.toISOString().split('T')[0];
+                businessDates.push(formattedDate);
+            }
+            // Move to the next day
+            currentDate.setDate(currentDate.getDate() + 1);
         }
-        const res = await window.api.calcIRM(pf, token, url)
-        console.log(res)
-        res.referenceId ? getIRM(res.referenceId) : toast.error(res.errorDescription);
+
+        return businessDates;
+    }
+
+    // // Example usage:
+    // const startDate = new Date('2024-10-04');
+    // const endDate = new Date('2024-10-08');
+
+    const invokeIRM = async () => {
+        console.log('123123')
+        const url = `https://ica.uat.ice.com/ICA/Api/v1/InvokeIrmIm`
+        const url2 = `https://ica.uat.ice.com/ICA/Api/v1/GetIrmImResults`
+        const dates = getBusinessDates(new Date(start), new Date(end))
+        for (let i = 0; i < dates.length; i++) {
+            const pf = {
+                "bizDate": dates[i],
+                // "bizDate": "2024-10-09",
+                "portfolios": [
+                    {
+                        "id": "Pf1",
+                        "positions": state.portfolio.map(item => ({
+                            "id": item.id,
+                            "exch": item.exch,
+                            "commodity": item.commodity,
+                            "secType": item.secType,
+                            "expiry": item.expiry,
+                            "longQty": item.longQty
+                        }))
+                    }
+                ]
+            }
+            const res = await window.api.invokeIRM(pf, token, url)
+            console.log(res)
+            // const id = res.referenceId
+            if (res.referenceId) {
+                // wait slightly more than 1 seconds after getting result
+                await new Promise(resolve => setTimeout(resolve, 1010));
+                const res2 = await window.api.getIRM(res.referenceId, token, url2)
+                console.log(res2)
+                res2.portfolios ? setResult(prev => ([...prev, { "id": res2.portfolios[0].id, "date": res2.bizDates[0].date, "im": res2.portfolios[0].currencies[0].im }])) : toast.error(res2.errorDescription);
+            } else { toast.error(res.errorDescription) }
+        }
+    };
+
+    const handleDownload = () => {
+        const fileName = `IRM_${Date.now()}.xlsx`
+        console.log(result)
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(result);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        const xlsxBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const blob = new Blob([xlsxBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        // const csv = Papa.unparse(data);
+        // const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        window.api.saveBlob(blob, localLoc + fileName);
     };
 
     const handleUserChange = (e) => {
@@ -307,24 +368,27 @@ const IRM = () => {
             </div>
             <h1 style={{ margin: '5px', }}>Results</h1>
             {result.length > 0 ?
-                <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
-                            <th style={{ border: '1px solid black', padding: '0px 29px' }}>Id</th>
-                            <th style={{ border: '1px solid black', padding: '0px 32px' }}>Date</th>
-                            <th style={{ border: '1px solid black', padding: '0px 8px' }}>IM</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {result.map((item, index) => (
-                            <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
-                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.id}</td>
-                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.date}</td>
-                                <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>${Math.abs(item.im).toLocaleString()}</td>
+                <>
+                    <table style={{ border: '1px solid black', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ backgroundColor: '#1c478a', color: 'white', fontWeight: 'bold' }}>
+                                <th style={{ border: '1px solid black', padding: '0px 29px' }}>Id</th>
+                                <th style={{ border: '1px solid black', padding: '0px 32px' }}>Date</th>
+                                <th style={{ border: '1px solid black', padding: '0px 8px' }}>IM</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {result.map((item, index) => (
+                                <tr key={index} style={index % 2 === 0 ? rowStyles : altRowStyles}>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.id}</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>{item.date}</td>
+                                    <td style={{ border: '1px solid black', padding: '0px 8px', color: 'black', width: '80px' }}>${Math.round(Math.abs(item.im)).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button onClick={handleDownload}>Download Data</button><input value={localLoc} onChange={(value) => handleLocalLocChange(value)} style={{ width: '100%', maxWidth: '830px' }}></input>
+                </>
                 : null}
             <div>
                 <h1>Positions</h1>

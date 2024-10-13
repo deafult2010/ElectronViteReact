@@ -74,14 +74,14 @@ const PVaR = () => {
     const handleSshLocChange = (e) => {
         setSshLoc(e.target.value);
         dispatch({
-            type: 'SSHPASS',
+            type: 'SSHLOC',
             payload: e.target.value
         });
     }
     const handleLocalLocChange = (e) => {
         setLocalLoc(e.target.value);
         dispatch({
-            type: 'SSHPASS',
+            type: 'LOCALLOC',
             payload: e.target.value
         });
     }

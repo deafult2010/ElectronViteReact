@@ -62,7 +62,7 @@ const api = {
     const res = await ipcRenderer.invoke('invokeIRM', pf, token, url)
     return res
   },
-  getIRM: async (pf, token, url) => {
+  getIRM: async (id, token, url) => {
     const res = await ipcRenderer.invoke('getIRM', id, token, url)
     return res
   },
